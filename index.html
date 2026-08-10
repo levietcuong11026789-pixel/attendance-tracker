@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>📝 Sổ Điểm Danh</title>
+  <meta name="description" content="Điểm danh học sinh học thêm, tự động tính học phí">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Điểm Danh">
+  <meta name="theme-color" content="#0a0a1a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="loading-icon">📝</div>
+    <p>Đang tải...</p>
+  </div>
+
+  <div class="bg-orbs" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="orb orb-4"></div>
+  </div>
+
+  <div id="app" class="hidden">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="avatar"><span class="avatar-symbol">📝</span></div>
+        <div>
+          <div class="app-title">Sổ Điểm Danh</div>
+          <div class="date-txt" id="date-display"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="top-btn" onclick="openStudentManager()" title="Quản lý học sinh">👨‍🎓</button>
+      </div>
+    </div>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-cards">
+        <div class="hero-card card-purple">
+          <div class="hc-label">📚 Lớp học</div>
+          <div class="hc-amount" id="hero-classes">0</div>
+          <div class="hc-sub">Đang quản lý</div>
+        </div>
+        <div class="hero-card card-cyan">
+          <div class="hc-label">👨‍🎓 Học sinh</div>
+          <div class="hc-amount" id="hero-students">0</div>
+          <div class="hc-sub">Tổng cộng</div>
+        </div>
+        <div class="hero-card card-amber">
+          <div class="hc-label">💰 Học phí</div>
+          <div class="hc-amount" id="hero-revenue">0 đ</div>
+          <div class="hc-sub">Tháng này</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLASS LIST -->
+    <div class="section-block">
+      <div class="section-title">📚 Danh sách lớp</div>
+      <div id="class-list"><div class="empty-msg">Chưa có lớp nào. Nhấn ➕ để tạo lớp mới! 📚</div></div>
+    </div>
+
+    <!-- FAB -->
+    <div class="fab-wrap">
+      <button class="fab fab-gradient" onclick="openAddClassModal()">＋ Tạo lớp mới</button>
+    </div>
+
+  </div>
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- ADD/EDIT CLASS MODAL -->
+  <div id="class-modal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal('class-modal')"></div>
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('class-modal')">✕</button>
+      <h2 id="class-modal-title">📚 Tạo lớp mới</h2>
+      <div class="modal-label">Tên lớp:</div>
+      <input type="text" id="class-name" class="text-input" placeholder="VD: Toán 9A, Lý 10B...">
+      <div class="modal-label">Học phí mỗi buổi (đ):</div>
+      <input type="text" id="class-price" class="text-input amount-input" placeholder="VD: 50000" inputmode="numeric">
+      <button class="btn-submit" onclick="saveClass()">💾 Lưu</button>
+      <button class="btn-delete hidden" id="class-delete-btn" onclick="deleteClass()">🗑️ Xóa lớp này</button>
+    </div>
+  </div>
+
+  <!-- CLASS DETAIL MODAL -->
+  <div id="class-detail-modal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal('class-detail-modal')"></div>
+    <div class="modal-box detail-box">
+      <button class="modal-close" onclick="closeModal('class-detail-modal')">✕</button>
+      <div class="detail-header">
+        <h2 id="detail-class-name">Lớp</h2>
+        <div class="detail-price" id="detail-class-price">0 đ/buổi</div>
+      </div>
+      <!-- TABS -->
+      <div class="cd-tabs">
+        <button class="cd-tab active" data-tab="attendance" onclick="switchClassTab('attendance')">✅ Điểm danh</button>
+        <button class="cd-tab" data-tab="students" onclick="switchClassTab('students')">👨‍🎓 Học sinh</button>
+        <button class="cd-tab" data-tab="monthly" onclick="switchClassTab('monthly')">📊 Tổng hợp</button>
+      </div>
+      <!-- ATTENDANCE PANEL -->
+      <div id="panel-attendance" class="cd-panel">
+        <div class="att-date-row">
+          <input type="date" id="att-date" class="text-input date-styled-input" onchange="onAttDateChange()">
+        </div>
+        <div class="att-actions">
+          <button class="att-action-btn att-all-on" onclick="markAllPresent()">✅ Tất cả có mặt</button>
+          <button class="att-action-btn att-all-off" onclick="markAllAbsent()">❌ Tất cả vắng</button>
+        </div>
+        <div id="att-summary" class="att-summary-bar"></div>
+        <div id="att-list"></div>
+      </div>
+      <!-- STUDENTS PANEL -->
+      <div id="panel-students" class="cd-panel hidden">
+        <div class="panel-top-row">
+          <span id="class-stu-count">0 học sinh</span>
+          <button class="btn-small green-btn" onclick="openAssignModal()">＋ Thêm HS vào lớp</button>
+        </div>
+        <div id="class-students-list"></div>
+      </div>
+      <!-- MONTHLY PANEL -->
+      <div id="panel-monthly" class="cd-panel hidden">
+        <div class="month-nav">
+          <button class="cal-nav" onclick="summaryPrev()">◀</button>
+          <h3 id="summary-month-label"></h3>
+          <button class="cal-nav" onclick="summaryNext()">▶</button>
+        </div>
+        <div class="summary-table-wrap" id="summary-table-wrap"></div>
+        <div id="summary-total" class="summary-total"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENT MANAGER MODAL -->
+  <div id="student-manager-modal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal('student-manager-modal')"></div>
+    <div class="modal-box manager-box">
+      <button class="modal-close" onclick="closeModal('student-manager-modal')">✕</button>
+      <h2>👨‍🎓 Quản lý học sinh</h2>
+      <div class="manager-top">
+        <select id="student-filter" class="filter-select" onchange="renderStudentManager()">
+          <option value="all">Tất cả khối</option>
+        </select>
+        <button class="btn-small green-btn" onclick="openAddStudentModal()">＋ Thêm HS</button>
+      </div>
+      <div id="student-list"></div>
+    </div>
+  </div>
+
+  <!-- ADD/EDIT STUDENT MODAL -->
+  <div id="add-student-modal" class="modal above hidden">
+    <div class="modal-backdrop" onclick="closeModal('add-student-modal')"></div>
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('add-student-modal')">✕</button>
+      <h2 id="add-stu-title">👨‍🎓 Thêm học sinh</h2>
+      <div class="modal-label">Họ tên học sinh:</div>
+      <input type="text" id="stu-name" class="text-input" placeholder="VD: Nguyễn Văn A">
+      <div class="modal-label">Khối lớp:</div>
+      <input type="text" id="stu-grade" class="text-input" placeholder="VD: Khối 9, Khối 10...">
+      <button class="btn-submit" onclick="saveStudent()">💾 Lưu</button>
+    </div>
+  </div>
+
+  <!-- ASSIGN STUDENT TO CLASS MODAL -->
+  <div id="assign-modal" class="modal above hidden">
+    <div class="modal-backdrop" onclick="closeModal('assign-modal')"></div>
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('assign-modal')">✕</button>
+      <h2>📥 Thêm học sinh vào lớp</h2>
+      <div class="modal-label">Lọc theo khối:</div>
+      <select id="assign-filter" class="filter-select" onchange="renderAssignList()">
+        <option value="all">Tất cả</option>
+      </select>
+      <div id="assign-list" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- UPDATE BANNER -->
+  <div id="update-banner" class="update-banner">
+    <div class="update-banner-content">
+      <span>🔄 Có phiên bản mới!</span>
+      <div class="update-banner-btns">
+        <button class="update-btn-ok" onclick="applyUpdate()">Cập nhật ngay</button>
+        <button class="update-btn-skip" onclick="dismissUpdate()">Để sau</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
