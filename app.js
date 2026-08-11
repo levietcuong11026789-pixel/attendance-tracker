@@ -395,7 +395,106 @@ function removeFromClass(sid) {
 }
 
 // ── ASSIGN STUDENTS ──
-function openAssignModal() { renderAssignList(); openModal('assign-modal'); }
+let pendingFileNames = [];
+
+function openAssignModal() {
+  // Reset tabs to "type" mode
+  switchAssignTab('type');
+  document.getElementById('batch-names').value = '';
+  document.getElementById('batch-grade').value = '';
+  document.getElementById('file-grade').value = '';
+  document.getElementById('file-preview').classList.add('hidden');
+  document.getElementById('file-input').value = '';
+  pendingFileNames = [];
+  renderAssignList();
+  openModal('assign-modal');
+}
+
+function switchAssignTab(tab) {
+  document.querySelectorAll('#assign-modal .cd-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.assign-panel').forEach(p => p.classList.add('hidden'));
+  document.getElementById('assign-panel-' + tab).classList.remove('hidden');
+  if (tab === 'pick') renderAssignList();
+}
+
+// TAB 1: Batch type names
+function batchAddStudents() {
+  const grade = document.getElementById('batch-grade').value.trim();
+  const raw = document.getElementById('batch-names').value.trim();
+  if (!grade) { showToast('⚠️ Nhập khối lớp!'); return; }
+  if (!raw) { showToast('⚠️ Nhập tên học sinh!'); return; }
+  const names = raw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+  if (!names.length) { showToast('⚠️ Không có tên nào!'); return; }
+  let added = 0;
+  names.forEach(name => {
+    const sid = generateId();
+    appData.students.push({ id: sid, name, grade, createdAt: Date.now() });
+    appData.classStudents.push({ classId: currentClassId, studentId: sid });
+    added++;
+  });
+  saveData(); renderClassStudents(); renderDashboard();
+  document.getElementById('batch-names').value = '';
+  showToast(`✅ Đã thêm ${added} học sinh vào lớp!`);
+}
+
+// TAB 2: File import
+function handleFileImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const text = ev.target.result;
+    pendingFileNames = text.split('\n').map(l => {
+      // Handle CSV: take first column or whole line
+      const parts = l.split(/[,;\t]/);
+      return (parts[0] || '').trim();
+    }).filter(n => n.length > 0 && !/^(stt|STT|#|họ|tên|name)/i.test(n));
+    showFilePreview();
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function showFilePreview() {
+  document.getElementById('file-preview').classList.remove('hidden');
+  document.getElementById('file-count').textContent = pendingFileNames.length;
+  document.getElementById('file-preview-list').innerHTML = pendingFileNames.map((n, i) =>
+    `<div class="stu-row"><div class="stu-num">${i+1}</div><div class="stu-info"><div class="stu-name">${n}</div></div></div>`
+  ).join('');
+}
+
+function confirmFileImport() {
+  const grade = document.getElementById('file-grade').value.trim();
+  if (!grade) { showToast('⚠️ Nhập khối lớp!'); return; }
+  if (!pendingFileNames.length) { showToast('⚠️ Không có tên!'); return; }
+  pendingFileNames.forEach(name => {
+    const sid = generateId();
+    appData.students.push({ id: sid, name, grade, createdAt: Date.now() });
+    appData.classStudents.push({ classId: currentClassId, studentId: sid });
+  });
+  saveData(); renderClassStudents(); renderDashboard();
+  showToast(`✅ Đã thêm ${pendingFileNames.length} HS từ file!`);
+  pendingFileNames = [];
+  document.getElementById('file-preview').classList.add('hidden');
+  document.getElementById('file-input').value = '';
+}
+
+// Drag & drop for file zone
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const zone = document.getElementById('file-drop-zone');
+    if (!zone) return;
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) { document.getElementById('file-input').files = e.dataTransfer.files; handleFileImport({target:{files:[file]}}); }
+    });
+  }, 1000);
+});
+
+// TAB 3: Pick existing
 function renderAssignList() {
   const inClass = new Set(appData.classStudents.filter(cs => cs.classId === currentClassId).map(cs => cs.studentId));
   const fv = document.getElementById('assign-filter')?.value || 'all';
@@ -408,7 +507,7 @@ function renderAssignList() {
   let avail = appData.students.filter(s => !inClass.has(s.id));
   if (fv !== 'all') avail = avail.filter(s => s.grade === fv);
   const el = document.getElementById('assign-list');
-  if (!avail.length) { el.innerHTML = '<div class="empty-msg">Không có HS nào để thêm.<br>Tạo HS mới ở mục "Quản lý HS" 👨‍🎓</div>'; return; }
+  if (!avail.length) { el.innerHTML = '<div class="empty-msg">Không có HS nào để thêm.<br>Dùng tab "Nhập tên" hoặc "Từ file" ✍️</div>'; return; }
   el.innerHTML = avail.map(s => `<div class="assign-row" onclick="assignStudent('${s.id}')">
     <div class="stu-info"><div class="stu-name">${s.name}</div><div class="stu-meta">${s.grade}</div></div>
     <div class="assign-check">➕</div></div>`).join('');

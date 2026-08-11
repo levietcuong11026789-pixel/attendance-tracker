@@ -177,14 +177,48 @@
   <!-- ASSIGN STUDENT TO CLASS MODAL -->
   <div id="assign-modal" class="modal above hidden">
     <div class="modal-backdrop" onclick="closeModal('assign-modal')"></div>
-    <div class="modal-box">
+    <div class="modal-box manager-box">
       <button class="modal-close" onclick="closeModal('assign-modal')">✕</button>
       <h2>📥 Thêm học sinh vào lớp</h2>
-      <div class="modal-label">Lọc theo khối:</div>
-      <select id="assign-filter" class="filter-select" onchange="renderAssignList()">
-        <option value="all">Tất cả</option>
-      </select>
-      <div id="assign-list" style="margin-top:12px"></div>
+      <!-- METHOD TABS -->
+      <div class="cd-tabs" style="margin-top:10px">
+        <button class="cd-tab active" data-tab="type" onclick="switchAssignTab('type')">✍️ Nhập tên</button>
+        <button class="cd-tab" data-tab="file" onclick="switchAssignTab('file')">📄 Từ file</button>
+        <button class="cd-tab" data-tab="pick" onclick="switchAssignTab('pick')">📋 Chọn có sẵn</button>
+      </div>
+      <!-- TAB 1: TYPE NAMES -->
+      <div id="assign-panel-type" class="assign-panel">
+        <div class="modal-label">Khối lớp:</div>
+        <input type="text" id="batch-grade" class="text-input" placeholder="VD: Khối 9, Khối 10...">
+        <div class="modal-label">Nhập tên học sinh (mỗi dòng 1 tên):</div>
+        <textarea id="batch-names" class="text-input" rows="8" placeholder="Nguyễn Văn A&#10;Trần Thị B&#10;Lê Văn C&#10;..." style="resize:vertical;line-height:1.8"></textarea>
+        <button class="btn-submit" onclick="batchAddStudents()">＋ Thêm tất cả vào lớp</button>
+      </div>
+      <!-- TAB 2: FILE IMPORT -->
+      <div id="assign-panel-file" class="assign-panel hidden">
+        <div class="modal-label">Khối lớp:</div>
+        <input type="text" id="file-grade" class="text-input" placeholder="VD: Khối 9, Khối 10...">
+        <div class="modal-label">Chọn file danh sách (.txt hoặc .csv):</div>
+        <div class="file-drop-zone" id="file-drop-zone" onclick="document.getElementById('file-input').click()">
+          <div style="font-size:36px;margin-bottom:8px">📄</div>
+          <div>Nhấn để chọn file hoặc kéo thả vào đây</div>
+          <div style="font-size:11px;margin-top:6px;opacity:.6">Mỗi dòng 1 tên học sinh</div>
+        </div>
+        <input type="file" id="file-input" accept=".txt,.csv,.xls,.xlsx" style="display:none" onchange="handleFileImport(event)">
+        <div id="file-preview" class="hidden" style="margin-top:12px">
+          <div class="modal-label">Xem trước (<span id="file-count">0</span> học sinh):</div>
+          <div id="file-preview-list" style="max-height:200px;overflow-y:auto"></div>
+          <button class="btn-submit" onclick="confirmFileImport()">＋ Thêm tất cả vào lớp</button>
+        </div>
+      </div>
+      <!-- TAB 3: PICK FROM EXISTING -->
+      <div id="assign-panel-pick" class="assign-panel hidden">
+        <div class="modal-label">Lọc theo khối:</div>
+        <select id="assign-filter" class="filter-select" onchange="renderAssignList()">
+          <option value="all">Tất cả</option>
+        </select>
+        <div id="assign-list" style="margin-top:12px"></div>
+      </div>
     </div>
   </div>
 
