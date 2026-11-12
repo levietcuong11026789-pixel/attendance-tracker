@@ -191,10 +191,34 @@ function countClassDays(classId, month, year) {
   return c;
 }
 
+function emptyClassesMarkup() {
+  return [
+    '<div class="empty-classes">',
+    '<svg class="empty-illustration" viewBox="0 0 520 245" role="img" aria-label="Minh họa một lớp học">',
+    '<path d="M67 207c-28-18-25-58 10-70 1-34 41-55 73-36 18-37 73-45 103-13 31-25 78-15 91 18 34-22 82-3 82 38 34 13 37 48 7 63z" fill="#e8f2f9"/>',
+    '<circle cx="104" cy="75" r="18" fill="#f4f9fc"/><circle cx="415" cy="65" r="22" fill="#f4f9fc"/>',
+    '<rect x="82" y="41" width="91" height="88" rx="7" fill="#fff" stroke="#d8e8f2" stroke-width="4"/>',
+    '<rect x="90" y="49" width="75" height="72" rx="3" fill="#dff3fc"/><path d="M127.5 49v72M90 85h75" stroke="#fff" stroke-width="4"/>',
+    '<path d="M90 106c14-13 25-12 38 0 10-10 22-11 37 0v15H90z" fill="#9ed6a8"/>',
+    '<rect x="240" y="36" width="172" height="111" rx="8" fill="#cf9559"/><rect x="248" y="43" width="156" height="95" rx="4" fill="#31826d"/>',
+    '<path d="m326 66 31 14-31 14-31-14z" fill="none" stroke="#f5faf7" stroke-width="2"/><path d="M311 91v13c10 8 21 8 31 0V91m15-11v22m0 0-5 7m5-7 5 7" fill="none" stroke="#f5faf7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    '<rect x="232" y="144" width="188" height="8" rx="3" fill="#b87c46"/>',
+    '<path d="M64 169c-3-24 10-40 27-42-1 18-7 33-27 42zm8 1c1-22 15-37 31-37 0 17-12 31-31 37zm8 4c8-19 25-27 39-21-6 16-20 25-39 21z" fill="#77ad70"/>',
+    '<rect x="67" y="172" width="42" height="32" rx="7" fill="#d7a269"/><path d="M73 174h30l-4 26H77z" fill="#e3b37a"/>',
+    '<rect x="196" y="153" width="178" height="13" rx="4" fill="#d99f65"/><rect x="181" y="165" width="208" height="13" rx="4" fill="#e6b780"/>',
+    '<path d="M199 177h12v42h-12zm169 0h12v42h-12z" fill="#c88b52"/>',
+    '<rect x="214" y="140" width="54" height="9" rx="3" fill="#4c89c0"/><rect x="220" y="131" width="48" height="8" rx="3" fill="#f1c36f"/><rect x="226" y="122" width="42" height="8" rx="3" fill="#e67d68"/>',
+    '<path d="M286 130h23l-3 22h-17z" fill="#f5f7f8" stroke="#d7e2e8" stroke-width="2"/><path d="m291 130 1-21m7 21 7-25m-3 25 3-16" stroke="#df9a54" stroke-width="3" stroke-linecap="round"/>',
+    '<path d="M149 184h40v8h-40zm182 0h40v8h-40z" fill="#d99f65"/><path d="M155 192v29m29-29v29m153-29v29m29-29v29" stroke="#c88b52" stroke-width="5" stroke-linecap="round"/>',
+    '</svg>',
+    '<p class="empty-classes-message">Chưa có nhóm lớp nào. Tạo nhóm lớp đầu tiên để bắt đầu theo dõi.</p>',
+    '</div>'
+  ].join('');
+}
 function renderClassList() {
   const el = document.getElementById('class-list');
   if (!appData.classes.length) {
-    el.innerHTML = '<div class="empty-msg">Chưa có nhóm lớp nào. Tạo nhóm lớp đầu tiên để bắt đầu theo dõi.</div>';
+    el.innerHTML = emptyClassesMarkup();
     return;
   }
   const now = new Date(), m = now.getMonth(), y = now.getFullYear();
