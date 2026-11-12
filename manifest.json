@@ -1,11 +1,11 @@
 {
-  "name": "Sổ Điểm Danh",
-  "short_name": "Điểm Danh",
+  "name": "Sổ Học Thêm",
+  "short_name": "Sổ Học Thêm",
   "description": "Điểm danh học sinh học thêm, tự động tính học phí",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0a0a1a",
-  "theme_color": "#0a0a1a",
+  "background_color": "#f4f6f8",
+  "theme_color": "#365f7f",
   "orientation": "portrait",
   "icons": [
     {

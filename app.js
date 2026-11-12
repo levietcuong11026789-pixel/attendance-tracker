@@ -13,7 +13,6 @@ let summaryYear = new Date().getFullYear();
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
-  if (!appData.classes.length && !appData.students.length) seedSampleData();
   currentAttDate = todayStr();
   renderDashboard();
   registerSW();
@@ -83,6 +82,11 @@ function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 5); }
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[char]);
+}
 function formatMoney(n) {
   if (n >= 1e6) return (n / 1e6).toFixed(n % 1e6 === 0 ? 0 : 1) + ' tr';
   if (n >= 1e3) return Math.round(n / 1e3) + 'k';
@@ -116,6 +120,22 @@ function closeModal(id) {
 //  DASHBOARD
 // ══════════════════════════════════════
 function renderDashboard() { renderDateDisplay(); renderHero(); renderClassList(); }
+function setDashboardNav(button) {
+  document.querySelectorAll('.sidebar-link').forEach(link => {
+    const active = link === button;
+    link.classList.toggle('active', active);
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+}
+function scrollToClasses() {
+  document.getElementById('class-list-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function openFirstClassTab(tab) {
+  if (!appData.classes.length) { showToast('Tạo nhóm lớp trước để bắt đầu.'); return; }
+  openClassDetail(appData.classes[0].id);
+  if (tab !== 'attendance') switchClassTab(tab);
+}
 
 function renderDateDisplay() {
   const d = new Date();
@@ -161,7 +181,7 @@ function countClassDays(classId, month, year) {
 function renderClassList() {
   const el = document.getElementById('class-list');
   if (!appData.classes.length) {
-    el.innerHTML = '<div class="empty-msg">Chưa có lớp nào. Nhấn ➕ để tạo lớp mới! 📚</div>';
+    el.innerHTML = '<div class="empty-msg">Chưa có nhóm lớp nào. Tạo nhóm lớp đầu tiên để bắt đầu theo dõi.</div>';
     return;
   }
   const now = new Date(), m = now.getMonth(), y = now.getFullYear();
@@ -174,9 +194,9 @@ function renderClassList() {
     });
     return `<div class="class-card" onclick="openClassDetail('${cls.id}')">
       <div class="cc-header">
-        <div class="cc-icon">📚</div>
-        <div class="cc-info"><div class="cc-name">${cls.name}</div><div class="cc-meta">${formatMoneyFull(cls.pricePerSession)}/buổi</div></div>
-        <button class="cc-edit-btn" onclick="event.stopPropagation();openEditClassModal('${cls.id}')" title="Sửa">✏️</button>
+        <div class="cc-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20M8 7h8"/></svg></div>
+        <div class="cc-info"><div class="cc-name">${escapeHtml(cls.name)}</div><div class="cc-meta">${formatMoneyFull(cls.pricePerSession)}/buổi</div></div>
+        <button class="cc-edit-btn" onclick="event.stopPropagation();openEditClassModal('${cls.id}')" title="Sửa">Sửa</button>
       </div>
       <div class="cc-stats">
         <div class="cc-stat"><span class="cc-stat-val">${sc}</span><span class="cc-stat-lbl">Học sinh</span></div>
@@ -190,7 +210,7 @@ function renderClassList() {
 //  CLASS CRUD
 // ══════════════════════════════════════
 function openAddClassModal() {
-  document.getElementById('class-modal-title').textContent = '📚 Tạo lớp mới';
+  document.getElementById('class-modal-title').textContent = 'Tạo nhóm lớp';
   document.getElementById('class-name').value = '';
   document.getElementById('class-price').value = '';
   document.getElementById('class-modal').dataset.editId = '';
@@ -200,7 +220,7 @@ function openAddClassModal() {
 function openEditClassModal(id) {
   const cls = appData.classes.find(c => c.id === id);
   if (!cls) return;
-  document.getElementById('class-modal-title').textContent = '✏️ Sửa lớp';
+  document.getElementById('class-modal-title').textContent = 'Sửa nhóm lớp';
   document.getElementById('class-name').value = cls.name;
   document.getElementById('class-price').value = cls.pricePerSession;
   document.getElementById('class-modal').dataset.editId = id;
@@ -211,16 +231,16 @@ function saveClass() {
   const name = document.getElementById('class-name').value.trim();
   const priceRaw = document.getElementById('class-price').value.replace(/[^\d]/g, '');
   const price = parseInt(priceRaw) || 0;
-  if (!name) { showToast('⚠️ Nhập tên lớp!'); return; }
-  if (price <= 0) { showToast('⚠️ Nhập giá tiền/buổi!'); return; }
+  if (!name) { showToast('Nhập tên lớp!'); return; }
+  if (price <= 0) { showToast('Nhập giá tiền/buổi!'); return; }
   const eid = document.getElementById('class-modal').dataset.editId;
   if (eid) {
     const c = appData.classes.find(x => x.id === eid);
     if (c) { c.name = name; c.pricePerSession = price; }
-    showToast('✅ Đã cập nhật lớp!');
+    showToast('Đã cập nhật lớp!');
   } else {
     appData.classes.push({ id: generateId(), name, pricePerSession: price, createdAt: Date.now() });
-    showToast('✅ Đã tạo lớp mới!');
+    showToast('Đã tạo lớp mới!');
   }
   saveData(); renderDashboard(); closeModal('class-modal');
 }
@@ -231,7 +251,7 @@ function deleteClass() {
   appData.classStudents = appData.classStudents.filter(cs => cs.classId !== eid);
   Object.keys(appData.attendance).forEach(k => { if (k.startsWith(eid + '_')) delete appData.attendance[k]; });
   saveData(); renderDashboard(); closeModal('class-modal');
-  showToast('🗑️ Đã xóa lớp!');
+  showToast('Xóa Đã xóa lớp!');
 }
 
 // ══════════════════════════════════════
@@ -244,7 +264,7 @@ function renderStudentManager() {
   const fe = document.getElementById('student-filter');
   if (fe) {
     const cur = fe.value;
-    fe.innerHTML = '<option value="all">Tất cả khối</option>' + grades.map(g => `<option value="${g}" ${cur===g?'selected':''}>${g}</option>`).join('');
+    fe.innerHTML = '<option value="all">Tất cả khối</option>' + grades.map(g => `<option value="${escapeHtml(g)}" ${cur===g?'selected':''}>${escapeHtml(g)}</option>`).join('');
   }
   let list = [...appData.students];
   if (fv !== 'all') list = list.filter(s => s.grade === fv);
@@ -252,12 +272,12 @@ function renderStudentManager() {
   if (!list.length) { el.innerHTML = '<div class="empty-msg">Chưa có học sinh nào 📝</div>'; return; }
   el.innerHTML = list.map(s => {
     const cc = appData.classStudents.filter(cs => cs.studentId === s.id).length;
-    return `<div class="stu-row"><div class="stu-info"><div class="stu-name">${s.name}</div><div class="stu-meta">${s.grade} · ${cc} lớp</div></div>
-      <div class="stu-actions"><button class="stu-btn stu-edit" onclick="openEditStudentModal('${s.id}')">✏️</button><button class="stu-btn stu-del" onclick="deleteStudent('${s.id}')">🗑️</button></div></div>`;
+    return `<div class="stu-row"><div class="stu-info"><div class="stu-name">${escapeHtml(s.name)}</div><div class="stu-meta">${escapeHtml(s.grade)} · ${cc} lớp</div></div>
+      <div class="stu-actions"><button class="stu-btn stu-edit" onclick="openEditStudentModal('${s.id}')">Sửa</button><button class="stu-btn stu-del" onclick="deleteStudent('${s.id}')">Xóa</button></div></div>`;
   }).join('');
 }
 function openAddStudentModal() {
-  document.getElementById('add-stu-title').textContent = '👨‍🎓 Thêm học sinh';
+  document.getElementById('add-stu-title').textContent = 'Thêm học sinh';
   document.getElementById('stu-name').value = '';
   document.getElementById('stu-grade').value = '';
   document.getElementById('add-student-modal').dataset.editId = '';
@@ -266,7 +286,7 @@ function openAddStudentModal() {
 function openEditStudentModal(id) {
   const s = appData.students.find(x => x.id === id);
   if (!s) return;
-  document.getElementById('add-stu-title').textContent = '✏️ Sửa học sinh';
+  document.getElementById('add-stu-title').textContent = 'Sửa học sinh';
   document.getElementById('stu-name').value = s.name;
   document.getElementById('stu-grade').value = s.grade;
   document.getElementById('add-student-modal').dataset.editId = id;
@@ -275,16 +295,16 @@ function openEditStudentModal(id) {
 function saveStudent() {
   const name = document.getElementById('stu-name').value.trim();
   const grade = document.getElementById('stu-grade').value.trim();
-  if (!name) { showToast('⚠️ Nhập tên HS!'); return; }
-  if (!grade) { showToast('⚠️ Nhập khối lớp!'); return; }
+  if (!name) { showToast('Nhập tên HS!'); return; }
+  if (!grade) { showToast('Nhập khối lớp!'); return; }
   const eid = document.getElementById('add-student-modal').dataset.editId;
   if (eid) {
     const s = appData.students.find(x => x.id === eid);
     if (s) { s.name = name; s.grade = grade; }
-    showToast('✅ Đã cập nhật!');
+    showToast('Đã cập nhật!');
   } else {
     appData.students.push({ id: generateId(), name, grade, createdAt: Date.now() });
-    showToast('✅ Đã thêm HS!');
+    showToast('Đã thêm HS!');
   }
   saveData(); renderStudentManager(); renderDashboard(); closeModal('add-student-modal');
 }
@@ -293,7 +313,7 @@ function deleteStudent(id) {
   appData.students = appData.students.filter(s => s.id !== id);
   appData.classStudents = appData.classStudents.filter(cs => cs.studentId !== id);
   saveData(); renderStudentManager(); renderDashboard();
-  showToast('🗑️ Đã xóa!');
+  showToast('Xóa Đã xóa!');
 }
 
 // ══════════════════════════════════════
@@ -336,42 +356,51 @@ function renderAttendance() {
     .map(cs => appData.students.find(s => s.id === cs.studentId)).filter(Boolean);
   const el = document.getElementById('att-list');
   if (!stus.length) {
-    el.innerHTML = '<div class="empty-msg">Chưa có HS trong lớp.<br>Chuyển tab "Học sinh" để thêm! 👨‍🎓</div>';
+    el.innerHTML = '<div class="empty-msg">Chưa có học sinh trong nhóm này. Chuyển sang tab Học sinh để thêm.</div>';
     document.getElementById('att-summary').innerHTML = '';
     return;
   }
   const k = `${currentClassId}_${date}`;
   const dd = appData.attendance[k] || {};
-  let pc = 0;
-  stus.forEach(s => { if (dd[s.id] === true) pc++; });
+  let pc = 0, ac = 0, pending = 0;
+  stus.forEach(s => {
+    if (dd[s.id] === true) pc++;
+    else if (dd[s.id] === false) ac++;
+    else pending++;
+  });
   document.getElementById('att-summary').innerHTML =
-    `<span class="att-present">✅ ${pc} có mặt</span><span class="att-absent">❌ ${stus.length - pc} vắng</span>`;
+    `<span class="att-present">${pc} có mặt</span><span class="att-absent">${ac} vắng</span><span class="att-pending">○ ${pending} chưa điểm danh</span>`;
   el.innerHTML = stus.map((s, i) => {
-    const p = dd[s.id] === true;
-    return `<div class="att-row ${p ? 'att-present-row' : 'att-absent-row'}" onclick="toggleAtt('${s.id}')">
+    const status = dd[s.id];
+    const rowState = status === true ? 'att-present-row' : status === false ? 'att-absent-row' : 'att-unmarked-row';
+    return `<div class="att-row ${rowState}">
       <div class="att-num">${i + 1}</div>
-      <div class="att-info"><div class="att-name">${s.name}</div><div class="att-grade">${s.grade}</div></div>
-      <div class="att-toggle ${p ? 'att-on' : 'att-off'}">${p ? '✅' : '❌'}</div></div>`;
+      <div class="att-info"><div class="att-name">${escapeHtml(s.name)}</div><div class="att-grade">${escapeHtml(s.grade)}</div></div>
+      <div class="att-status-controls" role="group" aria-label="Điểm danh ${escapeHtml(s.name)}">
+        <button type="button" class="att-status-btn att-status-present ${status === true ? 'selected' : ''}" aria-pressed="${status === true}" onclick="setAttendance('${s.id}', true)">✓ Có mặt</button>
+        <button type="button" class="att-status-btn att-status-absent ${status === false ? 'selected' : ''}" aria-pressed="${status === false}" onclick="setAttendance('${s.id}', false)">✕ Vắng</button>
+      </div></div>`;
   }).join('');
 }
-function toggleAtt(sid) {
+function setAttendance(sid, present) {
   const k = `${currentClassId}_${currentAttDate}`;
+  if (appData.attendance[k]?.[sid] === present) return;
   if (!appData.attendance[k]) appData.attendance[k] = {};
-  appData.attendance[k][sid] = !appData.attendance[k][sid];
-  saveData(); renderAttendance();
+  appData.attendance[k][sid] = present;
+  saveData(); renderAttendance(); renderDashboard();
 }
 function onAttDateChange() { currentAttDate = document.getElementById('att-date').value; renderAttendance(); }
 function markAllPresent() {
   const k = `${currentClassId}_${currentAttDate}`;
   if (!appData.attendance[k]) appData.attendance[k] = {};
   appData.classStudents.filter(cs => cs.classId === currentClassId).forEach(cs => { appData.attendance[k][cs.studentId] = true; });
-  saveData(); renderAttendance(); showToast('✅ Tất cả có mặt!');
+  saveData(); renderAttendance(); renderDashboard(); showToast('Tất cả có mặt!');
 }
 function markAllAbsent() {
   const k = `${currentClassId}_${currentAttDate}`;
   if (!appData.attendance[k]) appData.attendance[k] = {};
   appData.classStudents.filter(cs => cs.classId === currentClassId).forEach(cs => { appData.attendance[k][cs.studentId] = false; });
-  saveData(); renderAttendance(); showToast('❌ Tất cả vắng!');
+  saveData(); renderAttendance(); renderDashboard(); showToast('Tất cả vắng!');
 }
 
 // ══════════════════════════════════════
@@ -383,10 +412,10 @@ function renderClassStudents() {
     .map(cs => appData.students.find(s => s.id === cs.studentId)).filter(Boolean);
   document.getElementById('class-stu-count').textContent = `${stus.length} học sinh`;
   const el = document.getElementById('class-students-list');
-  if (!stus.length) { el.innerHTML = '<div class="empty-msg">Chưa có HS. Nhấn "Thêm HS vào lớp"! 📝</div>'; return; }
+  if (!stus.length) { el.innerHTML = '<div class="empty-msg">Chưa có học sinh trong nhóm này.</div>'; return; }
   el.innerHTML = stus.map((s, i) => `<div class="stu-row">
     <div class="stu-num">${i + 1}</div>
-    <div class="stu-info"><div class="stu-name">${s.name}</div><div class="stu-meta">${s.grade}</div></div>
+    <div class="stu-info"><div class="stu-name">${escapeHtml(s.name)}</div><div class="stu-meta">${escapeHtml(s.grade)}</div></div>
     <button class="stu-btn stu-del" onclick="removeFromClass('${s.id}')">✕</button></div>`).join('');
 }
 function removeFromClass(sid) {
@@ -422,10 +451,10 @@ function switchAssignTab(tab) {
 function batchAddStudents() {
   const grade = document.getElementById('batch-grade').value.trim();
   const raw = document.getElementById('batch-names').value.trim();
-  if (!grade) { showToast('⚠️ Nhập khối lớp!'); return; }
-  if (!raw) { showToast('⚠️ Nhập tên học sinh!'); return; }
+  if (!grade) { showToast('Nhập khối lớp!'); return; }
+  if (!raw) { showToast('Nhập tên học sinh!'); return; }
   const names = raw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
-  if (!names.length) { showToast('⚠️ Không có tên nào!'); return; }
+  if (!names.length) { showToast('Không có tên nào!'); return; }
   let added = 0;
   names.forEach(name => {
     const sid = generateId();
@@ -435,7 +464,7 @@ function batchAddStudents() {
   });
   saveData(); renderClassStudents(); renderDashboard();
   document.getElementById('batch-names').value = '';
-  showToast(`✅ Đã thêm ${added} học sinh vào lớp!`);
+  showToast(`Đã thêm ${added} học sinh vào lớp!`);
 }
 
 // TAB 2: File import
@@ -459,21 +488,21 @@ function showFilePreview() {
   document.getElementById('file-preview').classList.remove('hidden');
   document.getElementById('file-count').textContent = pendingFileNames.length;
   document.getElementById('file-preview-list').innerHTML = pendingFileNames.map((n, i) =>
-    `<div class="stu-row"><div class="stu-num">${i+1}</div><div class="stu-info"><div class="stu-name">${n}</div></div></div>`
+    `<div class="stu-row"><div class="stu-num">${i+1}</div><div class="stu-info"><div class="stu-name">${escapeHtml(n)}</div></div></div>`
   ).join('');
 }
 
 function confirmFileImport() {
   const grade = document.getElementById('file-grade').value.trim();
-  if (!grade) { showToast('⚠️ Nhập khối lớp!'); return; }
-  if (!pendingFileNames.length) { showToast('⚠️ Không có tên!'); return; }
+  if (!grade) { showToast('Nhập khối lớp!'); return; }
+  if (!pendingFileNames.length) { showToast('Không có tên!'); return; }
   pendingFileNames.forEach(name => {
     const sid = generateId();
     appData.students.push({ id: sid, name, grade, createdAt: Date.now() });
     appData.classStudents.push({ classId: currentClassId, studentId: sid });
   });
   saveData(); renderClassStudents(); renderDashboard();
-  showToast(`✅ Đã thêm ${pendingFileNames.length} HS từ file!`);
+  showToast(`Đã thêm ${pendingFileNames.length} HS từ file!`);
   pendingFileNames = [];
   document.getElementById('file-preview').classList.add('hidden');
   document.getElementById('file-input').value = '';
@@ -507,17 +536,17 @@ function renderAssignList() {
   let avail = appData.students.filter(s => !inClass.has(s.id));
   if (fv !== 'all') avail = avail.filter(s => s.grade === fv);
   const el = document.getElementById('assign-list');
-  if (!avail.length) { el.innerHTML = '<div class="empty-msg">Không có HS nào để thêm.<br>Dùng tab "Nhập tên" hoặc "Từ file" ✍️</div>'; return; }
+  if (!avail.length) { el.innerHTML = '<div class="empty-msg">Không có học sinh để thêm. Hãy nhập tên hoặc chọn từ danh sách.</div>'; return; }
   el.innerHTML = avail.map(s => `<div class="assign-row" onclick="assignStudent('${s.id}')">
-    <div class="stu-info"><div class="stu-name">${s.name}</div><div class="stu-meta">${s.grade}</div></div>
-    <div class="assign-check">➕</div></div>`).join('');
+    <div class="stu-info"><div class="stu-name">${escapeHtml(s.name)}</div><div class="stu-meta">${escapeHtml(s.grade)}</div></div>
+    <div class="assign-check">+</div></div>`).join('');
 }
 function assignStudent(sid) {
   const exists = appData.classStudents.find(cs => cs.classId === currentClassId && cs.studentId === sid);
   if (exists) return;
   appData.classStudents.push({ classId: currentClassId, studentId: sid });
   saveData(); renderAssignList(); renderClassStudents(); renderDashboard();
-  showToast('✅ Đã thêm vào lớp!');
+  showToast('Đã thêm vào lớp!');
 }
 
 // ══════════════════════════════════════
@@ -536,7 +565,7 @@ function renderMonthlySummary() {
   const totalEl = document.getElementById('summary-total');
 
   if (!stus.length) {
-    wrap.innerHTML = '<div class="empty-msg">Chưa có học sinh trong lớp 📝</div>';
+    wrap.innerHTML = '<div class="empty-msg">Chưa có học sinh trong nhóm này.</div>';
     totalEl.innerHTML = '';
     return;
   }
@@ -549,31 +578,44 @@ function renderMonthlySummary() {
     if (appData.attendance[`${currentClassId}_${ds}`]) activeDays.push(d);
   }
 
-  // Build table
+  // Show marked attendance, absences, and unmarked dates separately.
   let html = '<table class="summary-table"><thead><tr><th>Học sinh</th>';
-  activeDays.forEach(d => { html += `<th>${d}</th>`; });
-  html += '<th>Buổi</th><th>Học phí</th></tr></thead><tbody>';
+  activeDays.forEach(d => {
+    const ds = `${summaryYear}-${String(summaryMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    html += `<th title="${ds}">${d}</th>`;
+  });
+  html += '<th>Có mặt</th><th>Vắng</th><th>Phải đóng</th></tr></thead><tbody>';
 
-  let grandTotal = 0;
+  let totalPresent = 0, totalAbsent = 0, grandTotal = 0;
   stus.forEach(s => {
-    html += `<tr><td>${s.name}</td>`;
-    let total = 0;
+    html += `<tr><td>${escapeHtml(s.name)}</td>`;
+    let presentCount = 0, absentCount = 0;
     activeDays.forEach(d => {
       const ds = `${summaryYear}-${String(summaryMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const k = `${currentClassId}_${ds}`;
-      const present = appData.attendance[k]?.[s.id] === true;
-      if (present) total++;
-      html += `<td class="${present ? 'td-present' : 'td-absent'}">${present ? '✓' : '✗'}</td>`;
+      const status = appData.attendance[k]?.[s.id];
+      if (status === true) {
+        presentCount++;
+        html += '<td class="td-present">✓</td>';
+      } else if (status === false) {
+        absentCount++;
+        html += '<td class="td-absent">✗</td>';
+      } else {
+        html += '<td class="td-pending">—</td>';
+      }
     });
-    const fee = total * cls.pricePerSession;
+    const fee = presentCount * cls.pricePerSession;
+    totalPresent += presentCount;
+    totalAbsent += absentCount;
     grandTotal += fee;
-    html += `<td class="td-total">${total}</td><td class="td-fee">${formatMoney(fee)}</td></tr>`;
+    html += `<td class="td-total">${presentCount}</td><td class="td-absent-count">${absentCount}</td><td class="td-fee">${formatMoneyFull(fee)}</td></tr>`;
   });
   html += '</tbody></table>';
   wrap.innerHTML = html;
 
-  totalEl.innerHTML = `<div class="summary-total-label">💰 Tổng học phí ${monthNames[summaryMonth]}</div>
-    <div class="summary-total-val">${formatMoneyFull(grandTotal)}</div>`;
+  totalEl.innerHTML = `<div class="summary-metric"><span class="summary-metric-label">Buổi có mặt</span><strong>${totalPresent}</strong><small>Tổng theo học sinh</small></div>
+    <div class="summary-metric"><span class="summary-metric-label">Lượt vắng</span><strong>${totalAbsent}</strong><small>Tổng theo học sinh</small></div>
+    <div class="summary-metric summary-metric-fee"><span class="summary-metric-label">Học phí phải đóng</span><strong>${formatMoneyFull(grandTotal)}</strong><small>${monthNames[summaryMonth]}</small></div>`;
 }
 
 function summaryPrev() {

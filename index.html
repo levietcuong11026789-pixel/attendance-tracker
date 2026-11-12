@@ -3,22 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>📝 Sổ Điểm Danh</title>
+  <title>Sổ Học Thêm | Quản lý lớp</title>
   <meta name="description" content="Điểm danh học sinh học thêm, tự động tính học phí">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Điểm Danh">
-  <meta name="theme-color" content="#0a0a1a">
+  <meta name="apple-mobile-web-app-title" content="Sổ Học Thêm">
+  <meta name="theme-color" content="#365f7f">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <div id="loading-screen">
-    <div class="loading-icon">📝</div>
+    <div class="loading-icon">SH</div>
     <p>Đang tải...</p>
   </div>
 
@@ -29,56 +29,85 @@
     <div class="orb orb-4"></div>
   </div>
 
-  <div id="app" class="hidden">
-
-    <!-- TOP BAR -->
-    <div class="topbar">
-      <div class="topbar-left">
-        <div class="avatar"><span class="avatar-symbol">📝</span></div>
-        <div>
-          <div class="app-title">Sổ Điểm Danh</div>
-          <div class="date-txt" id="date-display"></div>
-        </div>
+  <div id="app" class="hidden dashboard-layout">
+    <aside class="sidebar">
+      <div class="brand-lockup">
+        <div class="brand-mark">SH</div>
+        <div><div class="brand-name">Sổ học thêm</div><div class="brand-caption">QUẢN LÝ LỚP HỌC</div></div>
       </div>
-      <div style="display:flex;gap:6px">
-        <button class="top-btn" onclick="openStudentManager()" title="Quản lý học sinh">👨‍🎓</button>
+      <div class="sidebar-caption">KHÔNG GIAN LÀM VIỆC</div>
+      <nav class="sidebar-nav" aria-label="Điều hướng chính">
+        <button class="sidebar-link active" aria-current="page" onclick="setDashboardNav(this);window.scrollTo({top:0,behavior:'smooth'})">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/></svg><span>Tổng quan</span>
+        </button>
+        <button class="sidebar-link" onclick="setDashboardNav(this);scrollToClasses()">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20"/><path d="M8 7h8"/></svg><span>Nhóm lớp</span>
+        </button>
+        <button class="sidebar-link" onclick="setDashboardNav(this);openStudentManager()">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1z"/><path d="M16 5.5a3 3 0 0 1 0 5.8"/><path d="M18 14a5 5 0 0 1 3 4.6V20h-3"/></svg><span>Học sinh</span>
+        </button>
+        <button class="sidebar-link" onclick="setDashboardNav(this);openFirstClassTab('attendance')">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h3"/><path d="m13 15 2 2 4-4"/></svg><span>Điểm danh</span>
+        </button>
+        <button class="sidebar-link" onclick="setDashboardNav(this);openFirstClassTab('monthly')">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h17"/><path d="m7 15 4-4 3 2 5-6"/></svg><span>Học phí &amp; báo cáo</span>
+        </button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-bottom-mark">✓</div>
+        <div><div class="sidebar-bottom-title">Lưu tự động</div><div class="sidebar-bottom-note">Dữ liệu trên thiết bị này</div></div>
       </div>
-    </div>
+    </aside>
 
-    <!-- HERO -->
-    <div class="hero">
-      <div class="hero-cards">
-        <div class="hero-card card-purple">
-          <div class="hc-label">📚 Lớp học</div>
-          <div class="hc-amount" id="hero-classes">0</div>
-          <div class="hc-sub">Đang quản lý</div>
-        </div>
-        <div class="hero-card card-cyan">
-          <div class="hc-label">👨‍🎓 Học sinh</div>
-          <div class="hc-amount" id="hero-students">0</div>
-          <div class="hc-sub">Tổng cộng</div>
-        </div>
-        <div class="hero-card card-amber">
-          <div class="hc-label">💰 Học phí</div>
-          <div class="hc-amount" id="hero-revenue">0 đ</div>
-          <div class="hc-sub">Tháng này</div>
-        </div>
+    <main class="main-shell">
+      <header class="topbar">
+        <div class="topbar-left"><span class="topbar-kicker">HÔM NAY</span><span class="date-txt" id="date-display"></span></div>
+        <div class="topbar-status"><span class="status-dot"></span>Dữ liệu được lưu tự động</div>
+      </header>
+
+      <div class="page-content">
+        <section class="page-heading">
+          <div class="heading-copy">
+            <div class="eyebrow">TỔNG QUAN</div>
+            <h1>Tổng quan lớp học</h1>
+            <p>Theo dõi học sinh, điểm danh và học phí trong cùng một nơi.</p>
+          </div>
+          <div class="page-heading-actions">
+            <button class="button-secondary" onclick="openStudentManager()">Quản lý học sinh</button>
+            <button class="button-primary" onclick="openAddClassModal()">＋ Tạo nhóm lớp</button>
+          </div>
+        </section>
+
+        <section class="hero" aria-label="Tóm tắt trong tháng">
+          <div class="hero-cards">
+            <div class="hero-card">
+              <div class="hc-label">NHÓM LỚP</div>
+              <div class="hc-amount" id="hero-classes">0</div>
+              <div class="hc-sub">Đang được quản lý</div>
+            </div>
+            <div class="hero-card">
+              <div class="hc-label">HỌC SINH</div>
+              <div class="hc-amount" id="hero-students">0</div>
+              <div class="hc-sub">Trong tất cả nhóm lớp</div>
+            </div>
+            <div class="hero-card">
+              <div class="hc-label">HỌC PHÍ PHẢI THU</div>
+              <div class="hc-amount" id="hero-revenue">0 đ</div>
+              <div class="hc-sub">Tạm tính tháng này</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-block" id="class-list-section">
+          <div class="section-heading">
+            <div><h2 class="section-title">Nhóm lớp</h2><p class="section-description">Chọn một nhóm để điểm danh hoặc xem học phí.</p></div>
+            <button class="section-action" onclick="openAddClassModal()">＋ Thêm nhóm lớp</button>
+          </div>
+          <div id="class-list"><div class="empty-msg">Chưa có nhóm lớp nào. Tạo nhóm lớp đầu tiên để bắt đầu theo dõi.</div></div>
+        </section>
       </div>
-    </div>
-
-    <!-- CLASS LIST -->
-    <div class="section-block">
-      <div class="section-title">📚 Danh sách lớp</div>
-      <div id="class-list"><div class="empty-msg">Chưa có lớp nào. Nhấn ➕ để tạo lớp mới! 📚</div></div>
-    </div>
-
-    <!-- FAB -->
-    <div class="fab-wrap">
-      <button class="fab fab-gradient" onclick="openAddClassModal()">＋ Tạo lớp mới</button>
-    </div>
-
+    </main>
   </div>
-
   <!-- ===== MODALS ===== -->
 
   <!-- ADD/EDIT CLASS MODAL -->
@@ -86,13 +115,13 @@
     <div class="modal-backdrop" onclick="closeModal('class-modal')"></div>
     <div class="modal-box">
       <button class="modal-close" onclick="closeModal('class-modal')">✕</button>
-      <h2 id="class-modal-title">📚 Tạo lớp mới</h2>
+      <h2 id="class-modal-title">Tạo nhóm lớp</h2>
       <div class="modal-label">Tên lớp:</div>
       <input type="text" id="class-name" class="text-input" placeholder="VD: Toán 9A, Lý 10B...">
       <div class="modal-label">Học phí mỗi buổi (đ):</div>
       <input type="text" id="class-price" class="text-input amount-input" placeholder="VD: 50000" inputmode="numeric">
-      <button class="btn-submit" onclick="saveClass()">💾 Lưu</button>
-      <button class="btn-delete hidden" id="class-delete-btn" onclick="deleteClass()">🗑️ Xóa lớp này</button>
+      <button class="btn-submit" onclick="saveClass()">Lưu</button>
+      <button class="btn-delete hidden" id="class-delete-btn" onclick="deleteClass()">Xóa lớp này</button>
     </div>
   </div>
 
@@ -107,9 +136,9 @@
       </div>
       <!-- TABS -->
       <div class="cd-tabs">
-        <button class="cd-tab active" data-tab="attendance" onclick="switchClassTab('attendance')">✅ Điểm danh</button>
-        <button class="cd-tab" data-tab="students" onclick="switchClassTab('students')">👨‍🎓 Học sinh</button>
-        <button class="cd-tab" data-tab="monthly" onclick="switchClassTab('monthly')">📊 Tổng hợp</button>
+        <button class="cd-tab active" data-tab="attendance" onclick="switchClassTab('attendance')">Điểm danh</button>
+        <button class="cd-tab" data-tab="students" onclick="switchClassTab('students')">Học sinh</button>
+        <button class="cd-tab" data-tab="monthly" onclick="switchClassTab('monthly')">Tổng hợp</button>
       </div>
       <!-- ATTENDANCE PANEL -->
       <div id="panel-attendance" class="cd-panel">
@@ -117,8 +146,8 @@
           <input type="date" id="att-date" class="text-input date-styled-input" onchange="onAttDateChange()">
         </div>
         <div class="att-actions">
-          <button class="att-action-btn att-all-on" onclick="markAllPresent()">✅ Tất cả có mặt</button>
-          <button class="att-action-btn att-all-off" onclick="markAllAbsent()">❌ Tất cả vắng</button>
+          <button class="att-action-btn att-all-on" onclick="markAllPresent()">Đánh dấu tất cả có mặt</button>
+          <button class="att-action-btn att-all-off" onclick="markAllAbsent()">Đánh dấu tất cả vắng</button>
         </div>
         <div id="att-summary" class="att-summary-bar"></div>
         <div id="att-list"></div>
@@ -138,8 +167,9 @@
           <h3 id="summary-month-label"></h3>
           <button class="cal-nav" onclick="summaryNext()">▶</button>
         </div>
+        <div class="summary-legend"><span class="legend-present">✓ Có mặt</span><span class="legend-absent">✕ Vắng</span><span class="legend-pending">— Chưa điểm danh</span></div>
         <div class="summary-table-wrap" id="summary-table-wrap"></div>
-        <div id="summary-total" class="summary-total"></div>
+        <div id="summary-total" class="summary-totals"></div>
       </div>
     </div>
   </div>
@@ -149,7 +179,7 @@
     <div class="modal-backdrop" onclick="closeModal('student-manager-modal')"></div>
     <div class="modal-box manager-box">
       <button class="modal-close" onclick="closeModal('student-manager-modal')">✕</button>
-      <h2>👨‍🎓 Quản lý học sinh</h2>
+      <h2>Quản lý học sinh</h2>
       <div class="manager-top">
         <select id="student-filter" class="filter-select" onchange="renderStudentManager()">
           <option value="all">Tất cả khối</option>
@@ -165,12 +195,12 @@
     <div class="modal-backdrop" onclick="closeModal('add-student-modal')"></div>
     <div class="modal-box">
       <button class="modal-close" onclick="closeModal('add-student-modal')">✕</button>
-      <h2 id="add-stu-title">👨‍🎓 Thêm học sinh</h2>
+      <h2 id="add-stu-title">Thêm học sinh</h2>
       <div class="modal-label">Họ tên học sinh:</div>
       <input type="text" id="stu-name" class="text-input" placeholder="VD: Nguyễn Văn A">
       <div class="modal-label">Khối lớp:</div>
       <input type="text" id="stu-grade" class="text-input" placeholder="VD: Khối 9, Khối 10...">
-      <button class="btn-submit" onclick="saveStudent()">💾 Lưu</button>
+      <button class="btn-submit" onclick="saveStudent()">Lưu</button>
     </div>
   </div>
 
@@ -179,12 +209,12 @@
     <div class="modal-backdrop" onclick="closeModal('assign-modal')"></div>
     <div class="modal-box manager-box">
       <button class="modal-close" onclick="closeModal('assign-modal')">✕</button>
-      <h2>📥 Thêm học sinh vào lớp</h2>
+      <h2>Thêm học sinh vào lớp</h2>
       <!-- METHOD TABS -->
       <div class="cd-tabs" style="margin-top:10px">
-        <button class="cd-tab active" data-tab="type" onclick="switchAssignTab('type')">✍️ Nhập tên</button>
-        <button class="cd-tab" data-tab="file" onclick="switchAssignTab('file')">📄 Từ file</button>
-        <button class="cd-tab" data-tab="pick" onclick="switchAssignTab('pick')">📋 Chọn có sẵn</button>
+        <button class="cd-tab active" data-tab="type" onclick="switchAssignTab('type')">Nhập tên</button>
+        <button class="cd-tab" data-tab="file" onclick="switchAssignTab('file')">Từ tệp</button>
+        <button class="cd-tab" data-tab="pick" onclick="switchAssignTab('pick')">Chọn học sinh có sẵn</button>
       </div>
       <!-- TAB 1: TYPE NAMES -->
       <div id="assign-panel-type" class="assign-panel">
@@ -200,7 +230,7 @@
         <input type="text" id="file-grade" class="text-input" placeholder="VD: Khối 9, Khối 10...">
         <div class="modal-label">Chọn file danh sách (.txt hoặc .csv):</div>
         <div class="file-drop-zone" id="file-drop-zone" onclick="document.getElementById('file-input').click()">
-          <div style="font-size:36px;margin-bottom:8px">📄</div>
+          <div class="file-drop-symbol">CSV</div>
           <div>Nhấn để chọn file hoặc kéo thả vào đây</div>
           <div style="font-size:11px;margin-top:6px;opacity:.6">Mỗi dòng 1 tên học sinh</div>
         </div>
