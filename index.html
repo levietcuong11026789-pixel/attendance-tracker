@@ -36,7 +36,7 @@
         <div><div class="brand-name">Sổ học thêm</div><div class="brand-caption">QUẢN LÝ LỚP HỌC</div></div>
       </div>
       <div class="sidebar-caption">KHÔNG GIAN LÀM VIỆC</div>
-      <nav class="sidebar-nav" aria-label="Điều hướng chính">
+      <nav id="primary-nav" class="sidebar-nav" aria-label="Điều hướng chính">
         <button class="sidebar-link active" aria-current="page" onclick="setDashboardNav(this);window.scrollTo({top:0,behavior:'smooth'})">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/></svg><span>Tổng quan</span>
         </button>
@@ -58,10 +58,11 @@
         <div><div class="sidebar-bottom-title">Lưu tự động</div><div class="sidebar-bottom-note">Dữ liệu trên thiết bị này</div></div>
       </div>
     </aside>
+    <button id="mobile-nav-backdrop" class="mobile-nav-backdrop" type="button" aria-label="Đóng điều hướng" onclick="closeMobileNav()"></button>
 
     <main class="main-shell">
       <header class="topbar">
-        <div class="topbar-left"><span class="topbar-kicker">HÔM NAY</span><span class="date-txt" id="date-display"></span></div>
+        <div class="topbar-left"><button id="mobile-menu-toggle" class="mobile-menu-toggle" type="button" aria-label="Mở điều hướng" aria-controls="primary-nav" aria-expanded="false" onclick="toggleMobileNav()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><div class="topbar-date-block"><span class="topbar-kicker">HÔM NAY</span><span class="date-txt" id="date-display"></span></div></div>
         <div class="topbar-status"><span class="status-dot"></span>Dữ liệu được lưu tự động</div>
       </header>
 

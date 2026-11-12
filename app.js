@@ -120,7 +120,20 @@ function closeModal(id) {
 //  DASHBOARD
 // ══════════════════════════════════════
 function renderDashboard() { renderDateDisplay(); renderHero(); renderClassList(); }
+function toggleMobileNav() {
+  const app = document.getElementById('app');
+  const open = !app.classList.contains('mobile-nav-open');
+  app.classList.toggle('mobile-nav-open', open);
+  document.getElementById('mobile-menu-toggle')?.setAttribute('aria-expanded', String(open));
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function closeMobileNav() {
+  document.getElementById('app')?.classList.remove('mobile-nav-open');
+  document.getElementById('mobile-menu-toggle')?.setAttribute('aria-expanded', 'false');
+  if (!document.querySelector('.modal:not(.hidden)')) document.body.style.overflow = '';
+}
 function setDashboardNav(button) {
+  closeMobileNav();
   document.querySelectorAll('.sidebar-link').forEach(link => {
     const active = link === button;
     link.classList.toggle('active', active);
