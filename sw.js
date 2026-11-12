@@ -1,5 +1,5 @@
 // ⬆️ MỖI KHI CẬP NHẬT APP, CHỈ CẦN ĐỔI SỐ VERSION NÀY
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 const CACHE_NAME = `attendance-v${APP_VERSION}`;
 
 const ASSETS = [
@@ -19,20 +19,11 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    ).then(() => {
-      return self.clients.matchAll({ includeUncontrolled: true }).then(clients => {
-        clients.forEach(client => {
-          client.postMessage({
-            type: 'APP_UPDATED',
-            version: APP_VERSION
-          });
-        });
-      });
-    })
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k.startsWith('attendance-v') && k !== CACHE_NAME)
+        .map(k => caches.delete(k))
+    )).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', e => {
@@ -47,10 +38,4 @@ self.addEventListener('fetch', e => {
       })
       .catch(() => caches.match(e.request))
   );
-});
-
-self.addEventListener('message', e => {
-  if (e.data && e.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
 });

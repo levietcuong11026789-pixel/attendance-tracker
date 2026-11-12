@@ -9,6 +9,7 @@ let currentClassId = null;
 let currentAttDate = '';
 let summaryMonth = new Date().getMonth();
 let summaryYear = new Date().getFullYear();
+let pendingAppUpdateReload = false;
 
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', () => {
@@ -93,6 +94,7 @@ function formatMoney(n) {
   return n.toLocaleString('vi-VN');
 }
 function formatMoneyFull(n) { return n.toLocaleString('vi-VN') + ' đ'; }
+// Student and attendance records stay in this browser's local storage; no cloud sync is used.
 function saveData() { localStorage.setItem('att_app_data', JSON.stringify(appData)); }
 function loadData() {
   try { const r = localStorage.getItem('att_app_data'); if (r) appData = JSON.parse(r); } catch (e) { /* ignore */ }
@@ -114,6 +116,7 @@ function closeModal(id) {
   // restore scroll if no other modals open
   const anyOpen = document.querySelector('.modal:not(.hidden)');
   if (!anyOpen) document.body.style.overflow = '';
+  maybeReloadAfterAppUpdate();
 }
 
 // ══════════════════════════════════════
@@ -671,20 +674,28 @@ function summaryNext() {
 // ══════════════════════════════════════
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
-  navigator.serviceWorker.addEventListener('message', e => {
-    if (e.data?.type === 'APP_UPDATED') {
-      document.getElementById('update-banner').classList.add('update-banner-show');
-    }
+  const pageWasAlreadyControlled = Boolean(navigator.serviceWorker.controller);
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!pageWasAlreadyControlled) return;
+    pendingAppUpdateReload = true;
+    maybeReloadAfterAppUpdate();
   });
+
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+    .then(registration => {
+      const checkForUpdate = () => {
+        if (navigator.onLine) registration.update().catch(() => {});
+      };
+      checkForUpdate();
+      window.addEventListener('online', checkForUpdate);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') checkForUpdate();
+      });
+    })
+    .catch(() => {});
 }
-function applyUpdate() {
-  document.getElementById('update-banner').classList.remove('update-banner-show');
-  if (navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
-  }
-  setTimeout(() => location.reload(), 300);
-}
-function dismissUpdate() {
-  document.getElementById('update-banner').classList.remove('update-banner-show');
+function maybeReloadAfterAppUpdate() {
+  if (!pendingAppUpdateReload || document.querySelector('.modal:not(.hidden)')) return;
+  pendingAppUpdateReload = false;
+  window.location.reload();
 }

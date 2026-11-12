@@ -164,13 +164,6 @@ html,body{min-height:100vh;font-family:'Nunito',sans-serif;background:var(--bg1)
 .summary-total-val{font-size:28px;font-weight:900;font-family:'Inter',sans-serif;color:var(--amber-d)}
 .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:9000;background:#fff;border:1px solid rgba(99,102,241,.15);padding:13px 24px;border-radius:50px;font-size:15px;font-weight:700;white-space:nowrap;box-shadow:0 8px 30px rgba(0,0,0,.12);animation:toast-in .3s ease;color:var(--text)}
 @keyframes toast-in{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-.update-banner{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(120px);z-index:9999;width:calc(100% - 32px);max-width:400px;background:#fff;border:1px solid rgba(99,102,241,.2);border-radius:var(--r);padding:18px;box-shadow:0 8px 36px rgba(0,0,0,.12);opacity:0;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .3s}
-.update-banner-show{transform:translateX(-50%) translateY(0)!important;opacity:1!important}
-.update-banner-content{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
-.update-banner-content span{font-size:15px;font-weight:700;color:var(--text)}
-.update-banner-btns{display:flex;gap:8px;width:100%}
-.update-btn-ok{flex:1;padding:12px;border-radius:50px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
-.update-btn-skip{padding:12px 18px;border-radius:50px;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.08);color:var(--text-dim);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
 /* FILE DROP & ASSIGN PANELS */
 .assign-panel{animation:slide-up .2s ease}
 .file-drop-zone{border:2px dashed rgba(99,102,241,.3);border-radius:var(--r);padding:30px 20px;text-align:center;cursor:pointer;transition:all .2s;color:var(--text-dim);font-size:14px;font-weight:600;background:rgba(99,102,241,.03)}
@@ -290,8 +283,6 @@ button,input,textarea,select{font-family:Inter,"Segoe UI",sans-serif}
 .summary-metric-fee{background:#f3f6f8;border-color:#dfe6ec}
 .summary-metric-fee strong{color:var(--primary-d)}
 .toast{border-color:#e2e8ee;box-shadow:0 5px 20px rgba(35,55,75,.12)}
-.update-banner{border-color:#e2e8ee;box-shadow:0 5px 22px rgba(35,55,75,.12)}
-.update-btn-ok{background:var(--primary)}
 .file-drop-zone{border-color:#cbd8e2;background:#f7f9fa;color:#627184}
 .file-drop-zone:hover{border-color:var(--primary);background:#eff4f7;color:var(--primary-d)}
 .file-drop-zone.drag-over{border-color:var(--green);background:#f0f6f2;color:var(--green-d)}
