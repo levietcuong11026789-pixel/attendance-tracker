@@ -2,18 +2,19 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sổ Học Thêm | Quản lý lớp</title>
   <meta name="description" content="Điểm danh học sinh học thêm, tự động tính học phí">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Sổ Học Thêm">
-  <meta name="theme-color" content="#153d5e">
+  <meta name="theme-color" content="#123554">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="design-system.css">
 </head>
 <body>
 
@@ -31,31 +32,40 @@
 
   <div id="app" class="hidden dashboard-layout">
     <aside class="sidebar">
+      <div class="sidebar-brand-row">
       <div class="brand-lockup">
         <div class="brand-mark">SH</div>
         <div><div class="brand-name">Sổ học thêm</div><div class="brand-caption">QUẢN LÝ LỚP HỌC</div></div>
       </div>
+      <button id="sidebar-collapse-toggle" class="sidebar-collapse-toggle" type="button" aria-label="Thu gọn thanh điều hướng" aria-expanded="true" onclick="toggleSidebar()" title="Thu gọn thanh điều hướng"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
+      </div>
       <div class="sidebar-caption">KHÔNG GIAN LÀM VIỆC</div>
       <nav id="primary-nav" class="sidebar-nav" aria-label="Điều hướng chính">
-        <button class="sidebar-link active" aria-current="page" onclick="setDashboardNav(this);window.scrollTo({top:0,behavior:'smooth'})">
+        <button class="sidebar-link active" aria-label="Tổng quan" title="Tổng quan" aria-current="page" onclick="setDashboardNav(this);window.scrollTo({top:0,behavior:'smooth'})">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/></svg><span>Tổng quan</span>
         </button>
-        <button class="sidebar-link" onclick="setDashboardNav(this);scrollToClasses()">
+        <button class="sidebar-link" aria-label="Nhóm lớp" title="Nhóm lớp" onclick="setDashboardNav(this);scrollToClasses()">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20"/><path d="M8 7h8"/></svg><span>Nhóm lớp</span>
         </button>
-        <button class="sidebar-link" onclick="setDashboardNav(this);openStudentManager()">
+        <button class="sidebar-link" aria-label="Học sinh" title="Học sinh" onclick="setDashboardNav(this);openStudentManager()">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1z"/><path d="M16 5.5a3 3 0 0 1 0 5.8"/><path d="M18 14a5 5 0 0 1 3 4.6V20h-3"/></svg><span>Học sinh</span>
         </button>
-        <button class="sidebar-link" onclick="setDashboardNav(this);openFirstClassTab('attendance')">
+        <button class="sidebar-link" aria-label="Điểm danh" title="Điểm danh" onclick="setDashboardNav(this);openQuickAttendance()">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h3"/><path d="m13 15 2 2 4-4"/></svg><span>Điểm danh</span>
         </button>
-        <button class="sidebar-link" onclick="setDashboardNav(this);openFirstClassTab('monthly')">
+        <button class="sidebar-link" aria-label="Học phí và báo cáo" title="Học phí và báo cáo" onclick="setDashboardNav(this);openFirstClassTab('monthly')">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h17"/><path d="m7 15 4-4 3 2 5-6"/></svg><span>Học phí &amp; báo cáo</span>
         </button>
       </nav>
       <div class="sidebar-bottom">
-        <div class="sidebar-bottom-mark">✓</div>
-        <div><div class="sidebar-bottom-title">Lưu tự động</div><div class="sidebar-bottom-note">Dữ liệu riêng trên thiết bị này</div></div>
+        <div class="sidebar-storage-row">
+          <div class="sidebar-bottom-mark" aria-hidden="true">✓</div>
+          <div><div class="sidebar-bottom-title">Dữ liệu cục bộ</div><div class="sidebar-bottom-note">Riêng trên thiết bị này</div></div>
+        </div>
+        <button type="button" class="sidebar-data-action" aria-label="Sao lưu hoặc khôi phục dữ liệu" onclick="openBackupModal()" title="Sao lưu hoặc khôi phục dữ liệu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>
+          <span>Sao lưu &amp; khôi phục</span>
+        </button>
       </div>
     </aside>
     <button id="mobile-nav-backdrop" class="mobile-nav-backdrop" type="button" aria-label="Đóng điều hướng" onclick="closeMobileNav()"></button>
@@ -63,7 +73,7 @@
     <main class="main-shell">
       <header class="topbar">
         <div class="topbar-left"><button id="mobile-menu-toggle" class="mobile-menu-toggle" type="button" aria-label="Mở điều hướng" aria-controls="primary-nav" aria-expanded="false" onclick="toggleMobileNav()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><div class="topbar-date-block"><span class="topbar-kicker">HÔM NAY</span><span class="date-txt" id="date-display"></span></div></div>
-        <div class="topbar-status"><span class="status-dot"></span>Dữ liệu được lưu tự động</div>
+        <div class="topbar-status" id="storage-status" data-state="ready" role="status" aria-live="polite"><span class="status-dot" aria-hidden="true"></span><span id="storage-status-text">Dữ liệu lưu trên thiết bị này</span></div>
       </header>
 
       <div class="page-content">
@@ -74,12 +84,20 @@
             <p>Theo dõi học sinh, điểm danh và học phí trong cùng một nơi.</p>
           </div>
           <div class="page-heading-actions">
-            <button class="button-secondary" onclick="openStudentManager()">Quản lý học sinh</button>
+            <button class="button-secondary" onclick="openQuickAttendance()">Điểm danh nhanh</button>
+            <button class="button-secondary" onclick="openAddStudentModal()">＋ Thêm học sinh</button>
             <button class="button-primary" onclick="openAddClassModal()">＋ Tạo nhóm lớp</button>
           </div>
         </section>
 
         <section class="hero" aria-label="Tóm tắt trong tháng">
+          <div class="dashboard-period-bar">
+            <div><span class="eyebrow">KỲ ĐANG XEM</span><strong id="dashboard-period-label"></strong></div>
+            <div class="period-controls" role="group" aria-label="Chọn tháng">
+              <button type="button" class="period-button" aria-label="Tháng trước" onclick="shiftDashboardMonth(-1)">‹</button>
+              <button type="button" class="period-button" aria-label="Tháng sau" onclick="shiftDashboardMonth(1)">›</button>
+            </div>
+          </div>
           <div class="hero-cards">
             <div class="hero-card">
               <div class="hc-label">NHÓM LỚP</div>
@@ -92,13 +110,19 @@
               <div class="hc-sub">Trong tất cả nhóm lớp</div><div class="metric-icon metric-icon-green"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1z"/><path d="M16 5.5a3 3 0 0 1 0 5.8M18 14a5 5 0 0 1 3 4.6V20h-3"/></svg></div>
             </div>
             <div class="hero-card">
-              <div class="hc-label">HỌC PHÍ PHẢI THU</div>
+              <div class="hc-label">TIỀN TÍNH THEO CÓ MẶT</div>
               <div class="hc-amount" id="hero-revenue">0 đ</div>
-              <div class="hc-sub">Tạm tính tháng này</div><div class="metric-icon metric-icon-amber"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="15" rx="2"/><path d="M3 9h18M16 15h2"/><path d="M5 6V4a2 2 0 0 1 2-2h12"/></svg></div>
+              <div class="hc-sub">Ước tính; chưa theo dõi tiền đã thu</div><div class="metric-icon metric-icon-amber"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="15" rx="2"/><path d="M3 9h18M16 15h2"/><path d="M5 6V4a2 2 0 0 1 2-2h12"/></svg></div>
+            </div>
+            <div class="hero-card">
+              <div class="hc-label">BUỔI ĐIỂM DANH</div>
+              <div class="hc-amount" id="hero-sessions">0</div>
+              <div class="hc-sub">Theo các nhóm trong kỳ</div><div class="metric-icon metric-icon-blue"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 9h18M8 14l2.5 2.5L16 11"/></svg></div>
             </div>
           </div>
         </section>
 
+        <div class="dashboard-content-grid">
         <section class="section-block" id="class-list-section">
           <div class="section-heading">
             <div><h2 class="section-title">Nhóm lớp</h2><p class="section-description">Chọn một nhóm để điểm danh hoặc xem học phí.</p></div>
@@ -106,6 +130,18 @@
           </div>
           <div id="class-list"><div class="empty-msg">Chưa có nhóm lớp nào. Tạo nhóm lớp đầu tiên để bắt đầu theo dõi.</div></div>
         </section>
+        <aside class="dashboard-side-panels">
+          <section class="dashboard-panel" aria-labelledby="recent-attendance-title">
+            <div class="dashboard-panel-heading"><div><h2 id="recent-attendance-title">Điểm danh gần đây</h2><p>Các buổi đã ghi nhận</p></div></div>
+            <div id="recent-attendance-list" class="dashboard-list"></div>
+          </section>
+          <section class="dashboard-panel" aria-labelledby="monthly-fees-title">
+            <div class="dashboard-panel-heading"><div><h2 id="monthly-fees-title">Học phí theo nhóm</h2><p>Ước tính theo buổi có mặt</p></div></div>
+            <div id="monthly-fee-list" class="dashboard-list"></div>
+            <p class="dashboard-panel-note">Ứng dụng chưa ghi nhận các khoản đã thu, miễn giảm hoặc học bù.</p>
+          </section>
+        </aside>
+        </div>
       </div>
     </main>
   </div>
@@ -117,12 +153,28 @@
     <div class="modal-box">
       <button class="modal-close" onclick="closeModal('class-modal')">✕</button>
       <h2 id="class-modal-title">Tạo nhóm lớp</h2>
-      <div class="modal-label">Tên lớp:</div>
+      <label class="modal-label" for="class-name">Tên lớp:</label>
       <input type="text" id="class-name" class="text-input" placeholder="VD: Toán 9A, Lý 10B...">
-      <div class="modal-label">Học phí mỗi buổi (đ):</div>
+      <label class="modal-label" for="class-price">Học phí mỗi buổi (đ):</label>
       <input type="text" id="class-price" class="text-input amount-input" placeholder="VD: 50000" inputmode="numeric">
+      <p id="class-price-history-note" class="field-help hidden">Thay đổi đơn giá sẽ cập nhật lại cách tính của các kỳ đã ghi nhận.</p>
       <button class="btn-submit" onclick="saveClass()">Lưu</button>
       <button class="btn-delete hidden" id="class-delete-btn" onclick="deleteClass()">Xóa lớp này</button>
+    </div>
+  </div>
+
+  <div id="data-backup-modal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal('data-backup-modal')"></div>
+    <div class="modal-box data-backup-box" role="dialog" aria-modal="true" aria-labelledby="data-backup-title">
+      <button class="modal-close" type="button" aria-label="Đóng" onclick="closeModal('data-backup-modal')">✕</button>
+      <div class="eyebrow">DỮ LIỆU RIÊNG TRÊN THIẾT BỊ</div>
+      <h2 id="data-backup-title">Sao lưu và khôi phục</h2>
+      <p class="backup-description">Tệp sao lưu chứa nhóm lớp, học sinh, liên kết lớp và điểm danh. Tệp chỉ được tải về máy, không gửi lên máy chủ.</p>
+      <button type="button" class="btn-submit" onclick="exportBackup()">Tải bản sao lưu JSON</button>
+      <button type="button" class="button-secondary restore-backup-button" onclick="document.getElementById('backup-file-input').click()">Chọn tệp để khôi phục</button>
+      <input id="backup-file-input" type="file" accept=".json,application/json" hidden onchange="restoreBackup(event)">
+      <p class="backup-warning">Khôi phục sẽ thay thế dữ liệu hiện tại trên thiết bị này. Hãy tải bản sao lưu trước khi khôi phục.</p>
+      <p id="backup-status" class="backup-status" role="status" aria-live="polite"></p>
     </div>
   </div>
 
@@ -144,6 +196,7 @@
       <!-- ATTENDANCE PANEL -->
       <div id="panel-attendance" class="cd-panel">
         <div class="att-date-row">
+          <label class="sr-only" for="att-date">Ngày điểm danh</label>
           <input type="date" id="att-date" class="text-input date-styled-input" onchange="onAttDateChange()">
         </div>
         <div class="att-actions">
@@ -182,6 +235,7 @@
       <button class="modal-close" onclick="closeModal('student-manager-modal')">✕</button>
       <h2>Quản lý học sinh</h2>
       <div class="manager-top">
+        <label class="sr-only" for="student-filter">Lọc học sinh theo khối</label>
         <select id="student-filter" class="filter-select" onchange="renderStudentManager()">
           <option value="all">Tất cả khối</option>
         </select>
@@ -197,9 +251,9 @@
     <div class="modal-box">
       <button class="modal-close" onclick="closeModal('add-student-modal')">✕</button>
       <h2 id="add-stu-title">Thêm học sinh</h2>
-      <div class="modal-label">Họ tên học sinh:</div>
+      <label class="modal-label" for="stu-name">Họ tên học sinh:</label>
       <input type="text" id="stu-name" class="text-input" placeholder="VD: Nguyễn Văn A">
-      <div class="modal-label">Khối lớp:</div>
+      <label class="modal-label" for="stu-grade">Khối lớp:</label>
       <input type="text" id="stu-grade" class="text-input" placeholder="VD: Khối 9, Khối 10...">
       <button class="btn-submit" onclick="saveStudent()">Lưu</button>
     </div>
@@ -219,32 +273,32 @@
       </div>
       <!-- TAB 1: TYPE NAMES -->
       <div id="assign-panel-type" class="assign-panel">
-        <div class="modal-label">Khối lớp:</div>
+        <label class="modal-label" for="batch-grade">Khối lớp:</label>
         <input type="text" id="batch-grade" class="text-input" placeholder="VD: Khối 9, Khối 10...">
-        <div class="modal-label">Nhập tên học sinh (mỗi dòng 1 tên):</div>
+        <label class="modal-label" for="batch-names">Nhập tên học sinh (mỗi dòng 1 tên):</label>
         <textarea id="batch-names" class="text-input" rows="8" placeholder="Nguyễn Văn A&#10;Trần Thị B&#10;Lê Văn C&#10;..." style="resize:vertical;line-height:1.8"></textarea>
         <button class="btn-submit" onclick="batchAddStudents()">＋ Thêm tất cả vào lớp</button>
       </div>
       <!-- TAB 2: FILE IMPORT -->
       <div id="assign-panel-file" class="assign-panel hidden">
-        <div class="modal-label">Khối lớp:</div>
+        <label class="modal-label" for="file-grade">Khối lớp:</label>
         <input type="text" id="file-grade" class="text-input" placeholder="VD: Khối 9, Khối 10...">
-        <div class="modal-label">Chọn file danh sách (.txt hoặc .csv):</div>
-        <div class="file-drop-zone" id="file-drop-zone" onclick="document.getElementById('file-input').click()">
-          <div class="file-drop-symbol">CSV</div>
-          <div>Nhấn để chọn file hoặc kéo thả vào đây</div>
-          <div style="font-size:11px;margin-top:6px;opacity:.6">Mỗi dòng 1 tên học sinh</div>
-        </div>
-        <input type="file" id="file-input" accept=".txt,.csv,.xls,.xlsx" style="display:none" onchange="handleFileImport(event)">
+        <label class="modal-label" for="file-input">Chọn file danh sách (.txt hoặc .csv):</label>
+        <button type="button" class="file-drop-zone" id="file-drop-zone" onclick="document.getElementById('file-input').click()">
+          <span class="file-drop-symbol">CSV</span>
+          <span>Nhấn để chọn tệp hoặc kéo thả vào đây</span>
+          <span class="file-drop-hint">Mỗi dòng một tên học sinh</span>
+        </button>
+        <input type="file" id="file-input" accept=".txt,.csv,text/plain,text/csv" hidden onchange="handleFileImport(event)">
         <div id="file-preview" class="hidden" style="margin-top:12px">
-          <div class="modal-label">Xem trước (<span id="file-count">0</span> học sinh):</div>
+          <p class="modal-label">Xem trước (<span id="file-count">0</span> học sinh):</p>
           <div id="file-preview-list" style="max-height:200px;overflow-y:auto"></div>
           <button class="btn-submit" onclick="confirmFileImport()">＋ Thêm tất cả vào lớp</button>
         </div>
       </div>
       <!-- TAB 3: PICK FROM EXISTING -->
       <div id="assign-panel-pick" class="assign-panel hidden">
-        <div class="modal-label">Lọc theo khối:</div>
+          <label class="modal-label" for="assign-filter">Lọc theo khối:</label>
         <select id="assign-filter" class="filter-select" onchange="renderAssignList()">
           <option value="all">Tất cả</option>
         </select>

@@ -1,11 +1,12 @@
 // ⬆️ MỖI KHI CẬP NHẬT APP, CHỈ CẦN ĐỔI SỐ VERSION NÀY
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.0';
 const CACHE_NAME = `attendance-v${APP_VERSION}`;
 
 const ASSETS = [
   './',
   './index.html',
   './style.css',
+  './design-system.css',
   './app.js',
   './manifest.json'
 ];

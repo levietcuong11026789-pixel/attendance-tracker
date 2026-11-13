@@ -3,17 +3,34 @@
    📝 SỔ ĐIỂM DANH — App Điểm Danh Học Sinh
    ============================================= */
 
+function getVietnamDateParts(date = new Date()) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(date).reduce((parts, item) => {
+    if (item.type !== 'literal') parts[item.type] = item.value;
+    return parts;
+  }, {});
+}
+
 // ── STATE ──
 let appData = { classes: [], students: [], classStudents: [], attendance: {} };
 let currentClassId = null;
 let currentAttDate = '';
-let summaryMonth = new Date().getMonth();
-let summaryYear = new Date().getFullYear();
+const initialVietnamDate = getVietnamDateParts();
+let summaryMonth = Number(initialVietnamDate.month) - 1;
+let summaryYear = Number(initialVietnamDate.year);
+let dashboardMonth = Number(initialVietnamDate.month) - 1;
+let dashboardYear = Number(initialVietnamDate.year);
 let pendingAppUpdateReload = false;
+let lastSavedSnapshot = JSON.stringify(appData);
+let dataLoadFailed = false;
 
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
+  applySidebarState();
+  window.addEventListener('resize', applySidebarState);
+  setupModalKeyboardAccess();
   currentAttDate = todayStr();
   renderDashboard();
   registerSW();
@@ -23,64 +40,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 700);
 });
 
-// ── SAMPLE DATA ──
-function seedSampleData() {
-  const ho = ['Nguyễn','Trần','Lê','Phạm','Hoàng','Huỳnh','Võ','Đặng','Bùi','Đỗ','Vũ','Phan','Ngô','Dương','Lý'];
-  const dem = ['Văn','Thị','Đức','Minh','Hoàng','Thanh','Quốc','Ngọc','Hữu','Phương','Anh','Bảo','Xuân','Hồng','Tuấn'];
-  const ten = ['An','Bình','Cường','Dũng','Em','Phúc','Giang','Hải','Khoa','Linh','Mai','Nam','Oanh','Phong','Quân','Sơn','Tâm','Uyên','Vân','Yến'];
-  const mkName = () => ho[Math.random()*ho.length|0]+' '+dem[Math.random()*dem.length|0]+' '+ten[Math.random()*ten.length|0];
-  const mkId = (p,i) => p+'_'+i;
-
-  // 3 classes
-  const classes = [
-    {id:'c1',name:'Toán 9A',pricePerSession:50000,createdAt:Date.now()},
-    {id:'c2',name:'Toán 10B',pricePerSession:60000,createdAt:Date.now()},
-    {id:'c3',name:'Lý 11C',pricePerSession:55000,createdAt:Date.now()}
-  ];
-
-  // 45 students (15 per grade)
-  const students = []; const classStudents = [];
-  const grades = ['Khối 9','Khối 10','Khối 11'];
-  const usedNames = new Set();
-  grades.forEach((g, gi) => {
-    for (let i = 0; i < 15; i++) {
-      let name;
-      do { name = mkName(); } while (usedNames.has(name));
-      usedNames.add(name);
-      const sid = mkId('s', gi * 15 + i);
-      students.push({id:sid, name, grade:g, createdAt:Date.now()});
-      classStudents.push({classId: classes[gi].id, studentId: sid});
-    }
-  });
-
-  // Sample attendance: last 5 weekdays for each class
-  const attendance = {};
-  const today = new Date();
-  let daysAdded = 0;
-  for (let back = 0; back < 14 && daysAdded < 5; back++) {
-    const d = new Date(today); d.setDate(d.getDate() - back);
-    if (d.getDay() === 0 || d.getDay() === 6) continue; // skip weekends
-    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    classes.forEach(cls => {
-      const key = `${cls.id}_${ds}`;
-      attendance[key] = {};
-      classStudents.filter(cs => cs.classId === cls.id).forEach(cs => {
-        attendance[key][cs.studentId] = Math.random() > 0.15; // 85% attendance
-      });
-    });
-    daysAdded++;
-  }
-
-  appData = {classes, students, classStudents, attendance};
-  saveData();
-}
-
 // ══════════════════════════════════════
 //  UTILITIES
 // ══════════════════════════════════════
 function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const { year, month, day } = getVietnamDateParts();
+  return `${year}-${month}-${day}`;
 }
 function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 5); }
 function escapeHtml(value) {
@@ -94,35 +59,306 @@ function formatMoney(n) {
   return n.toLocaleString('vi-VN');
 }
 function formatMoneyFull(n) { return n.toLocaleString('vi-VN') + ' đ'; }
-// Student and attendance records stay in this browser's local storage; no cloud sync is used.
-function saveData() { localStorage.setItem('att_app_data', JSON.stringify(appData)); }
-function loadData() {
-  try { const r = localStorage.getItem('att_app_data'); if (r) appData = JSON.parse(r); } catch (e) { /* ignore */ }
-  if (!appData.classes) appData.classes = [];
-  if (!appData.students) appData.students = [];
-  if (!appData.classStudents) appData.classStudents = [];
-  if (!appData.attendance) appData.attendance = {};
+function setStorageStatus(state, message) {
+  const status = document.getElementById('storage-status');
+  const text = document.getElementById('storage-status-text');
+  if (!status || !text) return;
+  status.dataset.state = state;
+  text.textContent = message;
 }
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+// Student, class, and attendance records stay in this browser's local storage; there is no cloud sync.
+function saveData(options = {}) {
+  if (dataLoadFailed && !options.allowRecovery) {
+    try { appData = JSON.parse(lastSavedSnapshot); } catch (_) { /* keep current defaults */ }
+    setStorageStatus('error', 'Không đọc được dữ liệu. Hãy khôi phục từ bản sao lưu.');
+    return false;
+  }
+  try {
+    const serialized = JSON.stringify(appData);
+    localStorage.setItem('att_app_data', serialized);
+    lastSavedSnapshot = serialized;
+    dataLoadFailed = false;
+    setStorageStatus('saved', 'Đã lưu trên thiết bị');
+    return true;
+  } catch (error) {
+    try { appData = JSON.parse(lastSavedSnapshot); } catch (_) { /* keep current state if rollback also fails */ }
+    setStorageStatus('error', 'Không lưu được. Hãy kiểm tra dung lượng thiết bị.');
+    return false;
+  }
+}
+function loadData() {
+  try {
+    const raw = localStorage.getItem('att_app_data');
+    if (!raw) {
+      lastSavedSnapshot = JSON.stringify(appData);
+      setStorageStatus('ready', 'Chưa có dữ liệu lưu trên thiết bị này');
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    if (!isPlainObject(parsed)) throw new Error('Dữ liệu không phải dạng đối tượng.');
+    const normalized = { ...parsed };
+    ['classes', 'students', 'classStudents'].forEach(key => {
+      if (normalized[key] === undefined) normalized[key] = [];
+      if (!Array.isArray(normalized[key])) throw new Error(`Trường ${key} không hợp lệ.`);
+    });
+    if (normalized.attendance === undefined) normalized.attendance = {};
+    if (!isPlainObject(normalized.attendance)) throw new Error('Dữ liệu điểm danh không hợp lệ.');
+    appData = normalized;
+    lastSavedSnapshot = JSON.stringify(appData);
+    setStorageStatus('saved', 'Đã lưu trên thiết bị');
+  } catch (error) {
+    dataLoadFailed = true;
+    setStorageStatus('error', 'Không đọc được dữ liệu. Hãy khôi phục từ bản sao lưu.');
+  }
+}
+
+function openBackupModal() {
+  setBackupStatus(
+    dataLoadFailed ? 'error' : '',
+    dataLoadFailed ? 'Dữ liệu hiện tại không đọc được. Chọn một tệp sao lưu hợp lệ để khôi phục.' : ''
+  );
+  closeMobileNav();
+  openModal('data-backup-modal');
+}
+
+function setBackupStatus(state, message) {
+  const status = document.getElementById('backup-status');
+  if (!status) return;
+  status.dataset.state = state;
+  status.textContent = message;
+}
+
+function exportBackup() {
+  if (dataLoadFailed) {
+    setBackupStatus('error', 'Không thể sao lưu vì dữ liệu hiện có không đọc được. Hãy khôi phục từ bản sao lưu hợp lệ.');
+    return;
+  }
+  try {
+    const backup = {
+      format: 'so-hoc-them-backup',
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      data: appData
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `so-hoc-them-sao-luu-${todayStr()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setBackupStatus('success', 'Đã tạo bản sao lưu trên thiết bị.');
+  } catch (error) {
+    setBackupStatus('error', 'Không tạo được tệp sao lưu. Hãy thử lại.');
+  }
+}
+
+function validateBackupData(payload) {
+  if (!isPlainObject(payload) || payload.format !== 'so-hoc-them-backup' || payload.schemaVersion !== 1) {
+    throw new Error('Tệp không phải bản sao lưu Sổ Học Thêm được hỗ trợ.');
+  }
+  const data = payload.data;
+  if (!isPlainObject(data) || !Array.isArray(data.classes) || !Array.isArray(data.students) ||
+      !Array.isArray(data.classStudents) || !isPlainObject(data.attendance)) {
+    throw new Error('Cấu trúc dữ liệu trong tệp không hợp lệ.');
+  }
+  const hasSafeId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value);
+
+  const classIds = new Set();
+  for (const cls of data.classes) {
+    if (!isPlainObject(cls) || !hasSafeId(cls.id) || classIds.has(cls.id) ||
+        typeof cls.name !== 'string' || !cls.name.trim() || !Number.isFinite(Number(cls.pricePerSession)) || Number(cls.pricePerSession) <= 0) {
+      throw new Error('Thông tin nhóm lớp trong tệp không hợp lệ.');
+    }
+    classIds.add(cls.id);
+  }
+
+  const studentIds = new Set();
+  for (const student of data.students) {
+    if (!isPlainObject(student) || !hasSafeId(student.id) || studentIds.has(student.id) ||
+        typeof student.name !== 'string' || !student.name.trim() || typeof student.grade !== 'string') {
+      throw new Error('Thông tin học sinh trong tệp không hợp lệ.');
+    }
+    studentIds.add(student.id);
+  }
+
+  const memberships = new Set();
+  for (const link of data.classStudents) {
+    if (!isPlainObject(link) || !classIds.has(link.classId) || !studentIds.has(link.studentId)) {
+      throw new Error('Tệp có liên kết lớp hoặc học sinh không hợp lệ.');
+    }
+    const pair = `${link.classId}\u0000${link.studentId}`;
+    if (memberships.has(pair)) throw new Error('Tệp có liên kết học sinh bị trùng.');
+    memberships.add(pair);
+  }
+
+  for (const [key, record] of Object.entries(data.attendance)) {
+    const separator = key.lastIndexOf('_');
+    const classId = key.slice(0, separator);
+    const date = key.slice(separator + 1);
+    const [year, month, day] = date.split('-').map(Number);
+    const parsedDate = new Date(year, month - 1, day);
+    const validDate = parsedDate.getFullYear() === year && parsedDate.getMonth() === month - 1 && parsedDate.getDate() === day;
+    if (separator < 1 || !classIds.has(classId) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !validDate || !isPlainObject(record) ||
+        Object.values(record).some(value => typeof value !== 'boolean')) {
+      throw new Error('Tệp có dữ liệu điểm danh không hợp lệ.');
+    }
+  }
+
+  return JSON.parse(JSON.stringify(data));
+}
+
+function restoreBackup(event) {
+  const input = event.target;
+  const file = input.files?.[0];
+  if (!file) return;
+  if (file.size > 25 * 1024 * 1024) {
+    setBackupStatus('error', 'Tệp quá lớn. Vui lòng chọn tệp dưới 25 MB.');
+    input.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onerror = () => {
+    setBackupStatus('error', 'Không đọc được tệp. Hãy chọn lại bản sao lưu JSON.');
+    input.value = '';
+  };
+  reader.onload = () => {
+    try {
+      const restoredData = validateBackupData(JSON.parse(reader.result));
+      const summary = `${restoredData.classes.length} nhóm lớp, ${restoredData.students.length} học sinh và ${Object.keys(restoredData.attendance).length} ngày điểm danh`;
+      if (!confirm(`Khôi phục ${summary}? Thao tác này sẽ thay thế toàn bộ dữ liệu hiện tại trên thiết bị này.`)) return;
+      appData = restoredData;
+      if (!saveData({ allowRecovery: true })) {
+        setBackupStatus('error', 'Chưa khôi phục được vì trình duyệt không lưu được dữ liệu. Tệp sao lưu vẫn còn nguyên.');
+        return;
+      }
+      renderDashboard();
+      setBackupStatus('success', `Đã khôi phục ${summary}.`);
+      showToast('Đã khôi phục dữ liệu trên thiết bị này.');
+    } catch (error) {
+      setBackupStatus('error', error.message || 'Tệp sao lưu không hợp lệ.');
+    } finally {
+      input.value = '';
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
 function showToast(msg) {
   const t = document.getElementById('toast');
+  if (!t) return;
   t.textContent = msg; t.classList.remove('hidden');
   clearTimeout(t._tm); t._tm = setTimeout(() => t.classList.add('hidden'), 2500);
 }
 
 // ── MODAL HELPERS ──
-function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+function openModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  modal._returnFocus = document.activeElement;
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  const box = modal.querySelector('.modal-box');
+  if (box) {
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('tabindex', '-1');
+    const heading = box.querySelector('h2');
+    if (heading) {
+      if (!heading.id) heading.id = `${id}-heading`;
+      box.setAttribute('aria-labelledby', heading.id);
+    }
+    const firstInput = box.querySelector('input:not([type="hidden"]), textarea, select, button:not(.modal-close)');
+    (firstInput || box).focus({ preventScroll: true });
+  }
+}
 function closeModal(id) {
-  document.getElementById(id).classList.add('hidden');
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  modal.classList.add('hidden');
   // restore scroll if no other modals open
   const anyOpen = document.querySelector('.modal:not(.hidden)');
   if (!anyOpen) document.body.style.overflow = '';
+  if (modal._returnFocus?.isConnected) modal._returnFocus.focus({ preventScroll: true });
   maybeReloadAfterAppUpdate();
+}
+
+function setupModalKeyboardAccess() {
+  document.addEventListener('keydown', event => {
+    const dialogs = [...document.querySelectorAll('.modal:not(.hidden)')];
+    const modal = dialogs[dialogs.length - 1];
+    if (!modal) {
+      if (event.key === 'Escape') closeMobileNav();
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeModal(modal.id);
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = [...modal.querySelectorAll('button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]')]
+      .filter(element => element.getClientRects().length > 0);
+    if (!focusable.length) {
+      event.preventDefault();
+      modal.querySelector('.modal-box')?.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
 }
 
 // ══════════════════════════════════════
 //  DASHBOARD
 // ══════════════════════════════════════
-function renderDashboard() { renderDateDisplay(); renderHero(); renderClassList(); }
+function renderDashboard() {
+  renderDateDisplay();
+  renderDashboardPeriod();
+  renderHero();
+  renderClassList();
+  renderRecentAttendance();
+  renderMonthlyFeeBreakdown();
+}
+function applySidebarState() {
+  let collapsed = false;
+  try { collapsed = localStorage.getItem('att_ui_sidebar_collapsed') === '1'; } catch (_) { /* keep expanded */ }
+  const isMobile = window.matchMedia('(max-width: 760px)').matches;
+  const isCompactTablet = window.matchMedia('(min-width: 761px) and (max-width: 1000px)').matches;
+  collapsed = !isMobile && (collapsed || isCompactTablet);
+  document.getElementById('app')?.classList.toggle('sidebar-collapsed', collapsed);
+  const button = document.getElementById('sidebar-collapse-toggle');
+  if (button) {
+    button.setAttribute('aria-expanded', String(!collapsed));
+    button.setAttribute('aria-label', collapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng');
+    button.title = collapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng';
+  }
+}
+function toggleSidebar() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  const collapsed = app.classList.toggle('sidebar-collapsed');
+  try { localStorage.setItem('att_ui_sidebar_collapsed', collapsed ? '1' : '0'); } catch (_) { /* keep this session's setting */ }
+  const button = document.getElementById('sidebar-collapse-toggle');
+  if (button) {
+    button.setAttribute('aria-expanded', String(!collapsed));
+    button.setAttribute('aria-label', collapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng');
+    button.title = collapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng';
+  }
+}
 function toggleMobileNav() {
   const app = document.getElementById('app');
   const open = !app.classList.contains('mobile-nav-open');
@@ -152,18 +388,31 @@ function openFirstClassTab(tab) {
   openClassDetail(appData.classes[0].id);
   if (tab !== 'attendance') switchClassTab(tab);
 }
+function openQuickAttendance() {
+  if (!appData.classes.length) {
+    showToast('Tạo nhóm lớp trước để bắt đầu điểm danh.');
+    return;
+  }
+  if (appData.classes.length === 1) {
+    openClassDetail(appData.classes[0].id);
+    return;
+  }
+  scrollToClasses();
+  showToast('Chọn nhóm lớp cần điểm danh.');
+}
 
 function renderDateDisplay() {
-  const d = new Date();
-  const days = ['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
-  document.getElementById('date-display').textContent =
-    `${days[d.getDay()]}, ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+  document.getElementById('date-display').textContent = new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh', weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric'
+  }).format(new Date());
 }
 
 function renderHero() {
-  const now = new Date(), m = now.getMonth(), y = now.getFullYear();
+  const m = dashboardMonth, y = dashboardYear;
   let totalRevenue = 0;
+  let totalSessions = 0;
   appData.classes.forEach(cls => {
+    totalSessions += countClassDays(cls.id, m, y);
     appData.classStudents.filter(cs => cs.classId === cls.id).forEach(cs => {
       totalRevenue += countSessions(cls.id, cs.studentId, m, y) * cls.pricePerSession;
     });
@@ -171,6 +420,77 @@ function renderHero() {
   document.getElementById('hero-classes').textContent = appData.classes.length;
   document.getElementById('hero-students').textContent = appData.students.length;
   document.getElementById('hero-revenue').textContent = formatMoneyFull(totalRevenue);
+  document.getElementById('hero-sessions').textContent = totalSessions;
+}
+
+function renderDashboardPeriod() {
+  const label = document.getElementById('dashboard-period-label');
+  if (label) label.textContent = `Tháng ${dashboardMonth + 1}, ${dashboardYear}`;
+}
+
+function shiftDashboardMonth(offset) {
+  const next = new Date(dashboardYear, dashboardMonth + offset, 1);
+  dashboardMonth = next.getMonth();
+  dashboardYear = next.getFullYear();
+  renderDashboard();
+}
+
+function formatAttendanceDate(dateString) {
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString('vi-VN', { day: 'numeric', month: 'short', weekday: 'short' });
+}
+
+function renderRecentAttendance() {
+  const target = document.getElementById('recent-attendance-list');
+  if (!target) return;
+  const today = todayStr();
+  const recent = Object.entries(appData.attendance)
+    .map(([key, record]) => {
+      const separator = key.lastIndexOf('_');
+      if (separator < 1) return null;
+      const classId = key.slice(0, separator);
+      const date = key.slice(separator + 1);
+      const cls = appData.classes.find(item => item.id === classId);
+      if (!cls || !/^\d{4}-\d{2}-\d{2}$/.test(date) || date > today || !isPlainObject(record)) return null;
+      const statuses = Object.values(record);
+      return {
+        classId,
+        className: cls.name,
+        date,
+        present: statuses.filter(value => value === true).length,
+        absent: statuses.filter(value => value === false).length
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 5);
+
+  if (!recent.length) {
+    target.innerHTML = '<div class="dashboard-empty-note">Chưa có buổi điểm danh được ghi nhận.</div>';
+    return;
+  }
+  target.innerHTML = recent.map(item => `<button type="button" class="dashboard-list-item" onclick="openClassDetail('${item.classId}', '${item.date}')">
+    <span class="dashboard-list-marker" aria-hidden="true">✓</span>
+    <span class="dashboard-list-copy"><strong>${escapeHtml(item.className)}</strong><small>${formatAttendanceDate(item.date)} · ${item.present} có mặt · ${item.absent} vắng</small></span>
+    <span class="dashboard-list-arrow" aria-hidden="true">›</span>
+  </button>`).join('');
+}
+
+function renderMonthlyFeeBreakdown() {
+  const target = document.getElementById('monthly-fee-list');
+  if (!target) return;
+  if (!appData.classes.length) {
+    target.innerHTML = '<div class="dashboard-empty-note">Tạo nhóm lớp để bắt đầu theo dõi.</div>';
+    return;
+  }
+  target.innerHTML = appData.classes.map(cls => {
+    const present = appData.classStudents
+      .filter(link => link.classId === cls.id)
+      .reduce((sum, link) => sum + countSessions(cls.id, link.studentId, dashboardMonth, dashboardYear), 0);
+    const amount = present * cls.pricePerSession;
+    return `<div class="dashboard-fee-row"><span><strong>${escapeHtml(cls.name)}</strong><small>${present} buổi có mặt</small></span><b>${formatMoneyFull(amount)}</b></div>`;
+  }).join('');
 }
 
 function countSessions(classId, studentId, month, year) {
@@ -224,7 +544,7 @@ function renderClassList() {
     el.innerHTML = emptyClassesMarkup();
     return;
   }
-  const now = new Date(), m = now.getMonth(), y = now.getFullYear();
+  const m = dashboardMonth, y = dashboardYear;
   el.innerHTML = appData.classes.map(cls => {
     const sc = appData.classStudents.filter(cs => cs.classId === cls.id).length;
     const cd = countClassDays(cls.id, m, y);
@@ -235,13 +555,13 @@ function renderClassList() {
     return `<div class="class-card" onclick="openClassDetail('${cls.id}')">
       <div class="cc-header">
         <div class="cc-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20M8 7h8"/></svg></div>
-        <div class="cc-info"><div class="cc-name">${escapeHtml(cls.name)}</div><div class="cc-meta">${formatMoneyFull(cls.pricePerSession)}/buổi</div></div>
+        <div class="cc-info"><button type="button" class="cc-open-btn" aria-label="Mở nhóm ${escapeHtml(cls.name)}" onclick="event.stopPropagation();openClassDetail('${cls.id}')"><span class="cc-name">${escapeHtml(cls.name)}</span></button><div class="cc-meta">${formatMoneyFull(cls.pricePerSession)}/buổi</div></div>
         <button class="cc-edit-btn" onclick="event.stopPropagation();openEditClassModal('${cls.id}')" title="Sửa">Sửa</button>
       </div>
       <div class="cc-stats">
         <div class="cc-stat"><span class="cc-stat-val">${sc}</span><span class="cc-stat-lbl">Học sinh</span></div>
         <div class="cc-stat"><span class="cc-stat-val">${cd}</span><span class="cc-stat-lbl">Buổi học</span></div>
-        <div class="cc-stat"><span class="cc-stat-val">${formatMoney(rev)}</span><span class="cc-stat-lbl">Học phí</span></div>
+        <div class="cc-stat"><span class="cc-stat-val">${formatMoney(rev)}</span><span class="cc-stat-lbl">Tính theo có mặt</span></div>
       </div></div>`;
   }).join('');
 }
@@ -255,6 +575,7 @@ function openAddClassModal() {
   document.getElementById('class-price').value = '';
   document.getElementById('class-modal').dataset.editId = '';
   document.getElementById('class-delete-btn').classList.add('hidden');
+  document.getElementById('class-price-history-note').classList.add('hidden');
   openModal('class-modal');
 }
 function openEditClassModal(id) {
@@ -265,6 +586,7 @@ function openEditClassModal(id) {
   document.getElementById('class-price').value = cls.pricePerSession;
   document.getElementById('class-modal').dataset.editId = id;
   document.getElementById('class-delete-btn').classList.remove('hidden');
+  document.getElementById('class-price-history-note').classList.remove('hidden');
   openModal('class-modal');
 }
 function saveClass() {
@@ -274,24 +596,27 @@ function saveClass() {
   if (!name) { showToast('Nhập tên lớp!'); return; }
   if (price <= 0) { showToast('Nhập giá tiền/buổi!'); return; }
   const eid = document.getElementById('class-modal').dataset.editId;
+  const successMessage = eid ? 'Đã cập nhật lớp!' : 'Đã tạo lớp mới!';
   if (eid) {
     const c = appData.classes.find(x => x.id === eid);
     if (c) { c.name = name; c.pricePerSession = price; }
-    showToast('Đã cập nhật lớp!');
   } else {
     appData.classes.push({ id: generateId(), name, pricePerSession: price, createdAt: Date.now() });
-    showToast('Đã tạo lớp mới!');
   }
-  saveData(); renderDashboard(); closeModal('class-modal');
+  if (!saveData()) { renderDashboard(); return; }
+  renderDashboard(); closeModal('class-modal');
+  showToast(successMessage);
 }
 function deleteClass() {
   const eid = document.getElementById('class-modal').dataset.editId;
-  if (!eid || !confirm('Xóa lớp này? Dữ liệu điểm danh cũng sẽ mất!')) return;
+  const cls = appData.classes.find(item => item.id === eid);
+  if (!cls || !confirm(`Xóa nhóm “${cls.name}”? Toàn bộ liên kết học sinh và điểm danh của nhóm này sẽ bị xóa khỏi thiết bị.`)) return;
   appData.classes = appData.classes.filter(c => c.id !== eid);
   appData.classStudents = appData.classStudents.filter(cs => cs.classId !== eid);
   Object.keys(appData.attendance).forEach(k => { if (k.startsWith(eid + '_')) delete appData.attendance[k]; });
-  saveData(); renderDashboard(); closeModal('class-modal');
-  showToast('Xóa Đã xóa lớp!');
+  if (!saveData()) { renderDashboard(); return; }
+  renderDashboard(); closeModal('class-modal');
+  showToast('Đã xóa lớp.');
 }
 
 // ══════════════════════════════════════
@@ -338,31 +663,34 @@ function saveStudent() {
   if (!name) { showToast('Nhập tên HS!'); return; }
   if (!grade) { showToast('Nhập khối lớp!'); return; }
   const eid = document.getElementById('add-student-modal').dataset.editId;
+  const successMessage = eid ? 'Đã cập nhật học sinh.' : 'Đã thêm học sinh.';
   if (eid) {
     const s = appData.students.find(x => x.id === eid);
     if (s) { s.name = name; s.grade = grade; }
-    showToast('Đã cập nhật!');
   } else {
     appData.students.push({ id: generateId(), name, grade, createdAt: Date.now() });
-    showToast('Đã thêm HS!');
   }
-  saveData(); renderStudentManager(); renderDashboard(); closeModal('add-student-modal');
+  if (!saveData()) { renderStudentManager(); renderDashboard(); return; }
+  renderStudentManager(); renderDashboard(); closeModal('add-student-modal');
+  showToast(successMessage);
 }
 function deleteStudent(id) {
-  if (!confirm('Xóa học sinh này?')) return;
+  const student = appData.students.find(item => item.id === id);
+  if (!student || !confirm(`Xóa ${student.name} khỏi danh sách? Liên kết nhóm lớp sẽ bị gỡ; dấu điểm danh cũ vẫn còn nhưng không còn gắn tên học sinh.`)) return;
   appData.students = appData.students.filter(s => s.id !== id);
   appData.classStudents = appData.classStudents.filter(cs => cs.studentId !== id);
-  saveData(); renderStudentManager(); renderDashboard();
-  showToast('Xóa Đã xóa!');
+  if (!saveData()) { renderStudentManager(); renderDashboard(); return; }
+  renderStudentManager(); renderDashboard();
+  showToast('Đã xóa học sinh.');
 }
 
 // ══════════════════════════════════════
 //  CLASS DETAIL
 // ══════════════════════════════════════
-function openClassDetail(classId) {
+function openClassDetail(classId, attendanceDate = todayStr()) {
   currentClassId = classId;
-  currentAttDate = todayStr();
-  const now = new Date(); summaryMonth = now.getMonth(); summaryYear = now.getFullYear();
+  currentAttDate = attendanceDate;
+  const now = getVietnamDateParts(); summaryMonth = Number(now.month) - 1; summaryYear = Number(now.year);
   const cls = appData.classes.find(c => c.id === classId);
   if (!cls) return;
   document.getElementById('detail-class-name').textContent = cls.name;
@@ -427,20 +755,23 @@ function setAttendance(sid, present) {
   if (appData.attendance[k]?.[sid] === present) return;
   if (!appData.attendance[k]) appData.attendance[k] = {};
   appData.attendance[k][sid] = present;
-  saveData(); renderAttendance(); renderDashboard();
+  if (!saveData()) { renderAttendance(); renderDashboard(); return; }
+  renderAttendance(); renderDashboard();
 }
 function onAttDateChange() { currentAttDate = document.getElementById('att-date').value; renderAttendance(); }
 function markAllPresent() {
   const k = `${currentClassId}_${currentAttDate}`;
   if (!appData.attendance[k]) appData.attendance[k] = {};
   appData.classStudents.filter(cs => cs.classId === currentClassId).forEach(cs => { appData.attendance[k][cs.studentId] = true; });
-  saveData(); renderAttendance(); renderDashboard(); showToast('Tất cả có mặt!');
+  if (!saveData()) { renderAttendance(); renderDashboard(); return; }
+  renderAttendance(); renderDashboard(); showToast('Tất cả có mặt!');
 }
 function markAllAbsent() {
   const k = `${currentClassId}_${currentAttDate}`;
   if (!appData.attendance[k]) appData.attendance[k] = {};
   appData.classStudents.filter(cs => cs.classId === currentClassId).forEach(cs => { appData.attendance[k][cs.studentId] = false; });
-  saveData(); renderAttendance(); renderDashboard(); showToast('Tất cả vắng!');
+  if (!saveData()) { renderAttendance(); renderDashboard(); return; }
+  renderAttendance(); renderDashboard(); showToast('Tất cả vắng!');
 }
 
 // ══════════════════════════════════════
@@ -459,8 +790,11 @@ function renderClassStudents() {
     <button class="stu-btn stu-del" onclick="removeFromClass('${s.id}')">✕</button></div>`).join('');
 }
 function removeFromClass(sid) {
+  const student = appData.students.find(item => item.id === sid);
+  if (!student || !confirm(`Gỡ ${student.name} khỏi nhóm này? Lịch sử điểm danh cũ sẽ được giữ trên thiết bị.`)) return;
   appData.classStudents = appData.classStudents.filter(cs => !(cs.classId === currentClassId && cs.studentId === sid));
-  saveData(); renderClassStudents(); renderDashboard(); showToast('Đã xóa khỏi lớp!');
+  if (!saveData()) { renderClassStudents(); renderDashboard(); return; }
+  renderClassStudents(); renderDashboard(); showToast('Đã xóa khỏi lớp!');
 }
 
 // ── ASSIGN STUDENTS ──
@@ -502,7 +836,8 @@ function batchAddStudents() {
     appData.classStudents.push({ classId: currentClassId, studentId: sid });
     added++;
   });
-  saveData(); renderClassStudents(); renderDashboard();
+  if (!saveData()) { renderClassStudents(); renderDashboard(); return; }
+  renderClassStudents(); renderDashboard();
   document.getElementById('batch-names').value = '';
   showToast(`Đã thêm ${added} học sinh vào lớp!`);
 }
@@ -541,7 +876,8 @@ function confirmFileImport() {
     appData.students.push({ id: sid, name, grade, createdAt: Date.now() });
     appData.classStudents.push({ classId: currentClassId, studentId: sid });
   });
-  saveData(); renderClassStudents(); renderDashboard();
+  if (!saveData()) { renderClassStudents(); renderDashboard(); return; }
+  renderClassStudents(); renderDashboard();
   showToast(`Đã thêm ${pendingFileNames.length} HS từ file!`);
   pendingFileNames = [];
   document.getElementById('file-preview').classList.add('hidden');
@@ -585,7 +921,8 @@ function assignStudent(sid) {
   const exists = appData.classStudents.find(cs => cs.classId === currentClassId && cs.studentId === sid);
   if (exists) return;
   appData.classStudents.push({ classId: currentClassId, studentId: sid });
-  saveData(); renderAssignList(); renderClassStudents(); renderDashboard();
+  if (!saveData()) { renderAssignList(); renderClassStudents(); renderDashboard(); return; }
+  renderAssignList(); renderClassStudents(); renderDashboard();
   showToast('Đã thêm vào lớp!');
 }
 
@@ -624,7 +961,7 @@ function renderMonthlySummary() {
     const ds = `${summaryYear}-${String(summaryMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     html += `<th title="${ds}">${d}</th>`;
   });
-  html += '<th>Có mặt</th><th>Vắng</th><th>Phải đóng</th></tr></thead><tbody>';
+  html += '<th>Có mặt</th><th>Vắng</th><th>Tính theo có mặt</th></tr></thead><tbody>';
 
   let totalPresent = 0, totalAbsent = 0, grandTotal = 0;
   stus.forEach(s => {
@@ -655,7 +992,7 @@ function renderMonthlySummary() {
 
   totalEl.innerHTML = `<div class="summary-metric"><span class="summary-metric-label">Buổi có mặt</span><strong>${totalPresent}</strong><small>Tổng theo học sinh</small></div>
     <div class="summary-metric"><span class="summary-metric-label">Lượt vắng</span><strong>${totalAbsent}</strong><small>Tổng theo học sinh</small></div>
-    <div class="summary-metric summary-metric-fee"><span class="summary-metric-label">Học phí phải đóng</span><strong>${formatMoneyFull(grandTotal)}</strong><small>${monthNames[summaryMonth]}</small></div>`;
+    <div class="summary-metric summary-metric-fee"><span class="summary-metric-label">Tiền tính theo buổi có mặt</span><strong>${formatMoneyFull(grandTotal)}</strong><small>${monthNames[summaryMonth]}</small></div>`;
 }
 
 function summaryPrev() {
